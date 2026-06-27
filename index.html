@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vakantie-planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Source Sans 3', system-ui, -apple-system, sans-serif;
+    background: #F4F5F7; color: #1B1E26;
+    -webkit-font-smoothing: antialiased; font-size: 14px;
+  }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgba(20,24,33,.16); border-radius: 8px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(20,24,33,.26); }
+  ::-webkit-scrollbar-track { background: transparent; }
+  input, textarea, select, button { font-family: inherit; }
+  input:focus, textarea:focus, select:focus { outline: none; }
+
+  /* hover states (ported from style-hover in the design) */
+  .dark-btn:hover { background:#33384a !important; }
+  .secondary-btn:hover { background:#F3F4F6 !important; }
+  .holiday-card:hover { box-shadow:0 8px 22px rgba(16,24,40,.10) !important; transform:translateY(-2px); }
+  .card-del:hover { background:#F3F4F6 !important; color:#C0392B !important; }
+  .add-card:hover { border-color:#B9BDC6 !important; color:#6B7280 !important; background:#fff !important; }
+  .back-btn:hover { color:#6B7280 !important; }
+  .backlog-item:hover { border-color:#DCDEE5 !important; box-shadow:0 2px 6px rgba(16,24,40,.07) !important; }
+  .cat-row:hover { background:#FAFAFB; }
+  .reset-btn:hover { color:#6B7280 !important; }
+  .newcat-btn:hover { border-color:#B9BDC6 !important; color:#6B7280 !important; }
+  .chip:hover { filter:brightness(0.98); }
+  .map-link:hover { text-decoration:underline !important; }
+  .delete-btn:hover { color:#96281c !important; }
+
+  /* drag-over highlight */
+  .cell.hot { background: rgba(74,110,210,.13) !important; }
+  .backlog-drop.hot { background: rgba(70,110,220,.07) !important; box-shadow: inset 0 0 0 2px oklch(0.62 0.16 18) !important; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function () {
+  "use strict";
+
+  // ----------------------------------------------------------------- constants
+  var MONTHS_SHORT = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+  var WD = ['zo','ma','di','wo','do','vr','za'];
+  var STORE = 'vakantieplanner.local.v1';
+
+  // ----------------------------------------------------------------- cloud (Supabase)
+  // Project URL + publishable key are safe to ship in client code (RLS guards the data).
+  var CLOUD = {
+    url: 'https://jgzlfjobajrckeymrwmj.supabase.co',
+    key: 'sb_publishable_aeRxt8JXDUhWwd0sRIqTmg_8uBgtvNr',
+    table: 'planner_state',
+    row: 'shared'
+  };
+  var SEGMENTS = [
+    { id:'morning',   name:'Ochtend',  icon:'☀️' },
+    { id:'midday',    name:'Middag',   icon:'🌤️' },
+    { id:'afternoon', name:'Namiddag', icon:'⛱️' },
+    { id:'evening',   name:'Avond',    icon:'🌙' },
+  ];
+  var PALETTES = {
+    default: { c_reis:{l:0.64,c:0.190,h:18}, c_bezoek:{l:0.62,c:0.165,h:252}, c_strand:{l:0.72,c:0.130,h:200}, c_activiteit:{l:0.70,c:0.165,h:150} },
+    cool:    { c_reis:{l:0.60,c:0.110,h:300}, c_bezoek:{l:0.60,c:0.110,h:248}, c_strand:{l:0.66,c:0.100,h:200}, c_activiteit:{l:0.63,c:0.095,h:222} },
+    warm:    { c_reis:{l:0.62,c:0.130,h:8},  c_bezoek:{l:0.62,c:0.120,h:30}, c_strand:{l:0.70,c:0.125,h:62},  c_activiteit:{l:0.65,c:0.110,h:135} },
+  };
+  var CAT_COLORS = ['oklch(0.64 0.19 18)','oklch(0.66 0.16 60)','oklch(0.72 0.13 200)','oklch(0.70 0.165 150)','oklch(0.62 0.165 252)','oklch(0.62 0.18 320)'];
+  var ACCENTS = ['oklch(0.64 0.19 18)','oklch(0.62 0.165 252)','oklch(0.70 0.165 150)','oklch(0.60 0.18 300)','oklch(0.74 0.155 66)'];
+
+  // ----------------------------------------------------------------- date helpers
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+  function isoOf(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function parseISO(str) { var m = /(\d{4})-(\d{1,2})-(\d{1,2})/.exec(str || ''); if (!m) return null; return new Date(+m[1], +m[2] - 1, +m[3]); }
+  function defaultDates() {
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 14);
+    var end = new Date(start.getTime() + 6 * 86400000);
+    return { start: isoOf(start), end: isoOf(end) };
+  }
+
+  // ----------------------------------------------------------------- defaults / state
+  function buildDefault() {
+    var categories = [
+      { id:'c_reis', name:'Reis' },
+      { id:'c_bezoek', name:'Bezoek' },
+      { id:'c_strand', name:'Strand' },
+      { id:'c_activiteit', name:'Activiteit' },
+    ];
+    var holidays = [
+      { id:'h_sample', name:'Week aan zee', start:'2026-07-11', end:'2026-07-17' },
+    ];
+    var items = [
+      { id:'it_s1', holidayId:'h_sample', title:'Aankomst & inchecken', categoryId:'c_reis', address:'Scheveningen', note:'', month:6, day:11, segment:'morning' },
+      { id:'it_s2', holidayId:'h_sample', title:'Strandwandeling', categoryId:'c_strand', address:'Scheveningen strand', note:'', month:6, day:11, segment:'afternoon' },
+      { id:'it_s3', holidayId:'h_sample', title:'Diner op de boulevard', categoryId:'c_activiteit', address:'Boulevard Scheveningen', note:'', month:6, day:11, segment:'evening' },
+      { id:'it_s4', holidayId:'h_sample', title:'Marktbezoek', categoryId:'c_bezoek', address:'Haagse Markt, Den Haag', note:'', month:6, day:12, segment:'morning' },
+      { id:'it_s5', holidayId:'h_sample', title:'Zwemmen in zee', categoryId:'c_strand', address:'', note:'', month:6, day:13, segment:'midday' },
+      { id:'it_s6', holidayId:'h_sample', title:'Fietsen huren', categoryId:'c_activiteit', address:'', note:'', month:null, day:null, segment:null },
+      { id:'it_s7', holidayId:'h_sample', title:'Mauritshuis bezoeken', categoryId:'c_bezoek', address:'Mauritshuis, Den Haag', note:'', month:null, day:null, segment:null },
+      { id:'it_s8', holidayId:'h_sample', title:'Souvenirs kopen', categoryId:'c_reis', address:'', note:'', month:null, day:null, segment:null },
+    ];
+    var pv = {}; categories.forEach(function (c) { pv[c.id] = true; });
+    return { categories: categories, holidays: holidays, items: items, pv: pv };
+  }
+
+  function loadState() {
+    var base = buildDefault();
+    var dd = defaultDates();
+    var runtime = {
+      draggingId: null, editorId: null, addTitle: '', addCategoryId: 'c_reis',
+      view: 'list', newOpen: false, newName: '', newStart: dd.start, newEnd: dd.end,
+      newCatOpen: false, newCatName: '', newCatColor: CAT_COLORS[0],
+      palette: 'default', showBalance: true,
+    };
+    try {
+      var raw = localStorage.getItem(STORE);
+      if (raw) {
+        var s = JSON.parse(raw);
+        if (Array.isArray(s.holidays)) base.holidays = s.holidays;
+        if (Array.isArray(s.categories) && s.categories.length) base.categories = s.categories;
+        if (Array.isArray(s.items)) {
+          base.items = s.items.map(function (it) {
+            var scheduled = it.month != null;
+            return {
+              id: it.id, holidayId: it.holidayId, title: it.title, categoryId: it.categoryId,
+              address: it.address || '', note: it.note || '',
+              month: scheduled ? it.month : null,
+              day: scheduled ? (it.day || 1) : null,
+              segment: scheduled ? (it.segment || 'morning') : null
+            };
+          });
+        }
+        if (s.pv) { base.pv = {}; base.categories.forEach(function (c) { base.pv[c.id] = true; }); base.pv = Object.assign(base.pv, s.pv); }
+        if (s.addCategoryId) runtime.addCategoryId = s.addCategoryId;
+        if (s.palette && PALETTES[s.palette]) runtime.palette = s.palette;
+        if (typeof s.showBalance === 'boolean') runtime.showBalance = s.showBalance;
+      }
+    } catch (e) {}
+    return Object.assign(base, runtime);
+  }
+
+  var state = loadState();
+
+  function serialize() {
+    return {
+      holidays: state.holidays, items: state.items, pv: state.pv,
+      categories: state.categories, addCategoryId: state.addCategoryId,
+      palette: state.palette, showBalance: state.showBalance
+    };
+  }
+
+  function persist() {
+    var blob = serialize();
+    try { localStorage.setItem(STORE, JSON.stringify(blob)); } catch (e) {}
+    cloud.save(blob);
+  }
+
+  // Merge a remote/parsed state blob into the live state (keeps runtime UI fields).
+  function applyBlob(s) {
+    if (!s) return;
+    if (Array.isArray(s.holidays)) state.holidays = s.holidays;
+    if (Array.isArray(s.categories) && s.categories.length) state.categories = s.categories;
+    if (Array.isArray(s.items)) {
+      state.items = s.items.map(function (it) {
+        var scheduled = it.month != null;
+        return {
+          id: it.id, holidayId: it.holidayId, title: it.title, categoryId: it.categoryId,
+          address: it.address || '', note: it.note || '',
+          month: scheduled ? it.month : null,
+          day: scheduled ? (it.day || 1) : null,
+          segment: scheduled ? (it.segment || 'morning') : null
+        };
+      });
+    }
+    if (s.pv) { var pv = {}; state.categories.forEach(function (c) { pv[c.id] = true; }); state.pv = Object.assign(pv, s.pv); }
+    if (s.addCategoryId) state.addCategoryId = s.addCategoryId;
+    if (s.palette && PALETTES[s.palette]) state.palette = s.palette;
+    if (typeof s.showBalance === 'boolean') state.showBalance = s.showBalance;
+    if (state.view !== 'list' && !state.holidays.some(function (h) { return h.id === state.view; })) state.view = 'list';
+    try { localStorage.setItem(STORE, JSON.stringify(serialize())); } catch (e) {}
+  }
+
+  // Cloud sync: shared single row, last-write-wins. localStorage stays the offline cache.
+  var cloud = (function () {
+    var client = null, saveTimer = null;
+    function init() {
+      if (client) return client;
+      if (!window.supabase || !CLOUD.url || !CLOUD.key) return null;
+      try { client = window.supabase.createClient(CLOUD.url, CLOUD.key); } catch (e) { client = null; }
+      return client;
+    }
+    function save(blob) {
+      var c = init(); if (!c) return;
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(function () {
+        c.from(CLOUD.table)
+          .upsert({ id: CLOUD.row, data: blob, updated_at: new Date().toISOString() })
+          .then(function (res) { if (res && res.error) console.warn('[cloud] save failed:', res.error.message); });
+      }, 600);
+    }
+    function load() {
+      var c = init(); if (!c) return;
+      c.from(CLOUD.table).select('data').eq('id', CLOUD.row).maybeSingle()
+        .then(function (res) {
+          if (!res) return;
+          if (res.error) { console.warn('[cloud] load failed:', res.error.message); return; }
+          var d = res.data && res.data.data;
+          if (d && Object.keys(d).length) { applyBlob(d); render(); }
+          else { save(serialize()); } // remote empty → seed it from local
+        });
+    }
+    return { init: init, save: save, load: load };
+  })();
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  // ----------------------------------------------------------------- lookups
+  function palette() { return PALETTES[state.palette] || PALETTES.default; }
+  function catById(id) { return state.categories.find(function (c) { return c.id === id; }); }
+  function catColor(id) {
+    var cat = catById(id);
+    if (cat && cat.color) return cat.color;
+    var b = palette()[id];
+    if (!b) return '#9AA0AB';
+    return 'oklch(' + b.l + ' ' + b.c + ' ' + b.h + ')';
+  }
+  function segName(id) { var s = SEGMENTS.find(function (x) { return x.id === id; }); return s ? s.name : ''; }
+  function currentHoliday() { return state.holidays.find(function (h) { return h.id === state.view; }) || null; }
+
+  function vacationDays(h) {
+    if (!h) return [];
+    var s = parseISO(h.start), e = parseISO(h.end);
+    if (!s) return [];
+    if (!e || e < s) { return [{ m: s.getMonth(), d: s.getDate(), wd: s.getDay(), weekend: (s.getDay() === 0 || s.getDay() === 6) }]; }
+    var cur = new Date(s.getTime()), days = [], guard = 0;
+    while (cur <= e && guard < 120) {
+      var wd = cur.getDay();
+      days.push({ m: cur.getMonth(), d: cur.getDate(), wd: wd, weekend: wd === 0 || wd === 6 });
+      cur = new Date(cur.getTime() + 86400000); guard++;
+    }
+    return days;
+  }
+  function fmtRange(h) {
+    var s = parseISO(h.start), e = parseISO(h.end);
+    if (!s || !e) return '';
+    return MONTHS_SHORT[s.getMonth()] + ' ' + s.getDate() + ' – ' + MONTHS_SHORT[e.getMonth()] + ' ' + e.getDate() + ', ' + e.getFullYear();
+  }
+  function dayCount(h) { var s = parseISO(h.start), e = parseISO(h.end); if (!s || !e) return 0; return Math.round((e - s) / 86400000) + 1; }
+
+  // ----------------------------------------------------------------- mutations
+  function updateItem(id, patch) {
+    state.items = state.items.map(function (it) { return it.id === id ? Object.assign({}, it, patch) : it; });
+    persist();
+  }
+  function updateHoliday(id, patch) {
+    state.holidays = state.holidays.map(function (h) { return h.id === id ? Object.assign({}, h, patch) : h; });
+    persist();
+  }
+  function createHoliday() {
+    var name = (state.newName || '').trim() || 'Naamloze vakantie';
+    var start = state.newStart, end = state.newEnd;
+    if (parseISO(end) && parseISO(start) && parseISO(end) < parseISO(start)) { var t = start; start = end; end = t; }
+    var id = 'h_' + Date.now();
+    state.holidays = state.holidays.concat([{ id: id, name: name, start: start, end: end }]);
+    state.view = id; state.newOpen = false; state.newName = '';
+    persist(); render();
+  }
+  function deleteHoliday(id) {
+    state.holidays = state.holidays.filter(function (h) { return h.id !== id; });
+    state.items = state.items.filter(function (it) { return it.holidayId !== id; });
+    if (state.view === id) state.view = 'list';
+    persist(); render();
+  }
+  function toggleCategory(cid) { state.pv = Object.assign({}, state.pv); state.pv[cid] = !state.pv[cid]; persist(); render(); }
+  function resetFilters() { var pv = {}; state.categories.forEach(function (c) { pv[c.id] = true; }); state.pv = pv; persist(); render(); }
+  function addCategory() {
+    var name = (state.newCatName || '').trim(); if (!name) return;
+    var id = 'c_' + Date.now();
+    var color = state.newCatColor || CAT_COLORS[0];
+    state.categories = state.categories.concat([{ id: id, name: name, color: color }]);
+    state.pv = Object.assign({}, state.pv); state.pv[id] = true;
+    state.newCatName = ''; state.newCatOpen = false;
+    persist(); render();
+  }
+  function addItem() {
+    var title = (state.addTitle || '').trim(); if (!title) return;
+    var it = { id: 'it_' + Date.now(), holidayId: state.view, title: title, categoryId: state.addCategoryId, address: '', note: '', month: null, day: null, segment: null };
+    state.items = state.items.concat([it]); state.addTitle = '';
+    persist(); render();
+  }
+  function dropToCell(m, d, seg) {
+    var id = state.draggingId; if (id == null) return;
+    updateItem(id, { month: m, day: d, segment: seg }); state.draggingId = null; render();
+  }
+  function dropToBacklog() {
+    var id = state.draggingId; if (id == null) return;
+    updateItem(id, { month: null, day: null, segment: null }); state.draggingId = null; render();
+  }
+  function deleteItem(id) {
+    state.items = state.items.filter(function (it) { return it.id !== id; });
+    state.editorId = null; persist(); render();
+  }
+
+  // ----------------------------------------------------------------- view helpers
+  function itemView(it) {
+    var c = catById(it.categoryId);
+    var color = catColor(it.categoryId);
+    return {
+      id: it.id, title: it.title, color: color,
+      chipBg: 'color-mix(in oklab, ' + color + ' 15%, #ffffff)',
+      chipText: 'color-mix(in oklab, ' + color + ' 68%, #181b22)',
+      catName: c ? c.name : ''
+    };
+  }
+  function optionsHtml(opts, selected) {
+    return opts.map(function (o) {
+      return '<option value="' + esc(o.id) + '"' + (o.id === selected ? ' selected' : '') + '>' + esc(o.label) + '</option>';
+    }).join('');
+  }
+  function backlogItem(it) {
+    var iv = itemView(it);
+    return '<div class="backlog-item" draggable="true" data-id="' + esc(iv.id) + '" data-action="edit" title="' + esc(iv.title) + '" style="display:flex; align-items:center; gap:9px; padding:8px 9px; border-radius:9px; cursor:grab; background:#fff; border:1px solid #EEEFF2; margin:4px 0; box-shadow:0 1px 1.5px rgba(16,24,40,.04);">'
+         +   '<span style="flex:0 0 auto; width:9px; height:9px; border-radius:50%; background:' + iv.color + ';"></span>'
+         +   '<span style="flex:1; min-width:0; font-size:13.5px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + esc(iv.title) + '</span>'
+         +   '<span style="flex:0 0 auto; font-size:11px; color:#A7ACB6; font-weight:500;">' + esc(iv.catName) + '</span>'
+         + '</div>';
+  }
+
+  // ----------------------------------------------------------------- render: list view
+  function renderList() {
+    var html = '<div style="flex:1; height:100%; overflow:auto; background:#F4F5F7;">';
+    html += '<div style="width:100%; max-width:900px; margin:0 auto; padding:60px 24px 64px;">';
+    html += '<div style="display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:28px;">'
+          +   '<div>'
+          +     '<div style="font-size:26px; font-weight:700; letter-spacing:-0.02em;">Jouw vakanties</div>'
+          +     '<div style="font-size:14px; color:#9AA0AB; margin-top:3px;">Plan elke reis dag per dag</div>'
+          +   '</div>'
+          +   '<button class="dark-btn" data-action="open-new" style="flex:0 0 auto; border:none; background:#1B1E26; color:#fff; border-radius:11px; padding:11px 18px; font-size:14px; font-weight:600; cursor:pointer;">+ Nieuwe vakantie</button>'
+          + '</div>';
+
+    if (state.holidays.length > 0) {
+      html += '<div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(258px,1fr)); gap:16px;">';
+      state.holidays.forEach(function (h, i) {
+        var its = state.items.filter(function (it) { return it.holidayId === h.id; });
+        var planned = its.filter(function (it) { return it.month != null; }).length;
+        var plans = its.filter(function (it) { return it.month == null; }).length;
+        var days = dayCount(h);
+        html += '<div class="holiday-card" data-action="open-holiday" data-id="' + esc(h.id) + '" style="position:relative; background:#fff; border:1px solid #EAEBEF; border-radius:16px; padding:20px 20px 18px; cursor:pointer; box-shadow:0 1px 2px rgba(16,24,40,.04); transition:box-shadow .12s,transform .12s;">'
+              +   '<div style="height:6px; width:46px; border-radius:20px; background:' + ACCENTS[i % ACCENTS.length] + '; margin-bottom:14px;"></div>'
+              +   '<div style="font-size:17px; font-weight:700; letter-spacing:-0.01em; padding-right:22px;">' + esc(h.name) + '</div>'
+              +   '<div style="font-size:13px; color:#6B7280; font-weight:500; margin-top:4px;">' + esc(fmtRange(h)) + '</div>'
+              +   '<div style="display:flex; align-items:center; gap:14px; margin-top:16px;">'
+              +     '<span style="font-size:12.5px; color:#9AA0AB; font-weight:600;">' + days + (days === 1 ? ' dag' : ' dagen') + '</span>'
+              +     '<span style="font-size:12.5px; color:#9AA0AB; font-weight:600;">' + planned + ' ingepland</span>'
+              +     '<span style="font-size:12.5px; color:#B7BCC5; font-weight:600;">' + plans + ' in activiteiten</span>'
+              +   '</div>'
+              +   '<button class="card-del" data-action="delete-holiday" data-id="' + esc(h.id) + '" title="Vakantie verwijderen" style="position:absolute; top:12px; right:12px; width:24px; height:24px; border:none; background:none; color:#C9CDD5; font-size:16px; line-height:1; cursor:pointer; border-radius:6px;">×</button>'
+              + '</div>';
+      });
+      html += '<div class="add-card" data-action="open-new" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; min-height:140px; background:#FBFBFC; border:1.5px dashed #D8DBE1; border-radius:16px; cursor:pointer; color:#9AA0AB;">'
+            +   '<span style="font-size:26px; line-height:1; font-weight:300;">+</span>'
+            +   '<span style="font-size:13px; font-weight:600;">Nieuwe vakantie</span>'
+            + '</div>';
+      html += '</div>';
+    } else {
+      html += '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:70px 24px; background:#fff; border:1px solid #EAEBEF; border-radius:18px;">'
+            +   '<div style="font-size:40px; margin-bottom:12px;">🧳</div>'
+            +   '<div style="font-size:18px; font-weight:700;">Nog geen vakanties</div>'
+            +   '<div style="font-size:14px; color:#9AA0AB; margin-top:5px; max-width:340px;">Maak je eerste reis aan en sleep activiteiten naar elke dag.</div>'
+            +   '<button class="dark-btn" data-action="open-new" style="margin-top:20px; border:none; background:#1B1E26; color:#fff; border-radius:11px; padding:11px 20px; font-size:14px; font-weight:600; cursor:pointer;">+ Nieuwe vakantie</button>'
+            + '</div>';
+    }
+
+    html += '</div></div>';
+    return html;
+  }
+
+  // ----------------------------------------------------------------- render: in-holiday view
+  function renderHoliday(holiday) {
+    var vis = state.items.filter(function (it) { return it.holidayId === holiday.id && state.pv[it.categoryId] !== false; });
+    var days = vacationDays(holiday);
+
+    var catCount = {};
+    state.items.forEach(function (it) {
+      if (it.holidayId !== holiday.id) return;
+      if (state.pv[it.categoryId] === false) return;
+      catCount[it.categoryId] = (catCount[it.categoryId] || 0) + 1;
+    });
+
+    var byCell = {};
+    vis.forEach(function (it) { if (it.month != null) { var k = it.month + '-' + it.day + '-' + (it.segment || 'morning'); (byCell[k] = byCell[k] || []).push(it); } });
+
+    var backlogItems = vis.filter(function (it) { return it.month == null; });
+    var sched = vis.filter(function (it) { return it.month != null; });
+    var total = sched.length;
+    var categoryOptions = state.categories.map(function (c) { return { id: c.id, label: c.name }; });
+
+    var html = '';
+
+    // ---------- sidebar ----------
+    html += '<aside style="width:312px; flex:0 0 312px; height:100%; background:#FFFFFF; border-right:1px solid #EAEBEF; display:flex; flex-direction:column;">';
+    html += '<div style="padding:16px 20px 15px; border-bottom:1px solid #F0F1F4;">'
+          +   '<button class="back-btn" data-action="back-to-list" style="border:none; background:none; color:#9AA0AB; font-size:12.5px; font-weight:600; cursor:pointer; padding:0; margin-bottom:9px;">← Alle vakanties</button>'
+          +   '<input type="text" data-field="holidayName" value="' + esc(holiday.name) + '" style="width:100%; border:none; background:none; padding:0; font-size:18px; font-weight:700; letter-spacing:-0.01em; color:#1B1E26;" />'
+          +   '<div style="font-size:12.5px; color:#9AA0AB; margin-top:2px;">' + esc(fmtRange(holiday)) + '</div>'
+          + '</div>';
+
+    html += '<div style="flex:1; min-height:0; overflow-y:auto; padding:16px 16px 24px;">';
+
+    // quick add
+    html += '<div style="margin-bottom:20px;">'
+          +   '<div style="font-size:11px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:#9AA0AB; margin-bottom:9px;">Een activiteit toevoegen</div>'
+          +   '<input type="text" data-field="addTitle" value="' + esc(state.addTitle) + '" placeholder="Nieuwe activiteit…" style="width:100%; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:10px; padding:9px 11px; font-size:13.5px; color:#1B1E26; margin-bottom:7px;" />'
+          +   '<div style="display:flex; gap:7px;">'
+          +     '<select data-field="addCategory" style="flex:1; min-width:0; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:10px; padding:8px 9px; font-size:12.5px; color:#4B5160;">' + optionsHtml(categoryOptions, state.addCategoryId) + '</select>'
+          +     '<button class="dark-btn" data-action="add" style="flex:0 0 auto; border:none; background:#1B1E26; color:#fff; border-radius:10px; padding:0 15px; font-size:13px; font-weight:600; cursor:pointer;">Toevoegen</button>'
+          +   '</div>'
+          + '</div>';
+
+    // plans / backlog
+    html += '<div style="margin-bottom:22px;">'
+          +   '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:9px;">'
+          +     '<div style="font-size:11px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:#9AA0AB;">Activiteiten</div>'
+          +     '<div style="font-size:11.5px; font-weight:600; color:#9AA0AB; background:#F3F4F6; border-radius:20px; padding:2px 8px;">' + backlogItems.length + '</div>'
+          +   '</div>'
+          +   '<div class="backlog-drop" data-drop="backlog" style="border-radius:12px; padding:6px; min-height:64px; transition:background .12s,box-shadow .12s; background:#FAFAFB; box-shadow:inset 0 0 0 1px #F0F1F4;">';
+    backlogItems.forEach(function (it) { html += backlogItem(it); });
+    if (backlogItems.length === 0) {
+      html += '<div style="text-align:center; color:#B7BCC5; font-size:12.5px; padding:18px 8px;">Nog geen activiteiten — voeg hierboven ideeën toe</div>';
+    }
+    html += '</div></div>';
+
+    // filters
+    html += '<div style="margin-bottom:22px;">'
+          +   '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:11px;">'
+          +     '<div style="font-size:11px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:#9AA0AB;">Categorieën</div>'
+          +     '<button class="reset-btn" data-action="reset" style="border:none; background:none; color:#A7ACB6; font-size:11.5px; font-weight:600; cursor:pointer; padding:0;">Herstellen</button>'
+          +   '</div>';
+    state.categories.forEach(function (c) {
+      var on = state.pv[c.id] !== false;
+      var color = catColor(c.id);
+      html += '<div class="cat-row" data-action="toggle" data-id="' + esc(c.id) + '" style="display:flex; align-items:center; gap:10px; cursor:pointer; padding:6px 3px; border-radius:8px; user-select:none;">'
+            +   '<span style="flex:0 0 auto; width:15px; height:15px; border-radius:4px; display:flex; align-items:center; justify-content:center; background:' + (on ? color : '#fff') + '; border:1.5px solid ' + (on ? color : '#C9CDD5') + ';">'
+            +     '<span style="color:#fff; font-size:10px; font-weight:800; line-height:1;">' + (on ? '✓' : '') + '</span>'
+            +   '</span>'
+            +   '<span style="flex:1; font-size:13.5px; font-weight:600; color:' + (on ? '#2A2E38' : '#B7BCC5') + ';">' + esc(c.name) + '</span>'
+            +   '<span style="font-size:11px; color:#B7BCC5; font-weight:600;">' + (catCount[c.id] || 0) + '</span>'
+            + '</div>';
+    });
+    if (!state.newCatOpen) {
+      html += '<button class="newcat-btn" data-action="toggle-newcat" style="width:100%; margin-top:8px; border:1.5px dashed #D8DBE1; background:none; color:#9AA0AB; border-radius:9px; padding:8px 0; font-size:12.5px; font-weight:600; cursor:pointer;">+ Categorie toevoegen</button>';
+    } else {
+      html += '<div style="margin-top:9px; padding:11px; background:#FAFAFB; border:1px solid #EFF0F3; border-radius:11px;">'
+            +   '<input type="text" data-field="newCatName" value="' + esc(state.newCatName) + '" placeholder="Naam categorie…" style="width:100%; border:1px solid #E4E6EB; background:#fff; border-radius:9px; padding:8px 10px; font-size:13px; color:#1B1E26; margin-bottom:10px;" />'
+            +   '<div style="display:flex; align-items:center; gap:8px; margin-bottom:11px;">';
+      CAT_COLORS.forEach(function (col) {
+        var ring = col === state.newCatColor ? '#1B1E26' : 'transparent';
+        html += '<button data-action="pick-color" data-color="' + esc(col) + '" style="width:22px; height:22px; border-radius:50%; cursor:pointer; padding:0; background:' + col + '; border:2px solid ' + ring + ';"></button>';
+      });
+      html += '</div>'
+            +   '<div style="display:flex; gap:7px;">'
+            +     '<button class="dark-btn" data-action="add-category" style="flex:1; border:none; background:#1B1E26; color:#fff; border-radius:9px; padding:8px 0; font-size:12.5px; font-weight:600; cursor:pointer;">Toevoegen</button>'
+            +     '<button class="secondary-btn" data-action="toggle-newcat" style="flex:0 0 auto; border:1px solid #E4E6EB; background:#fff; color:#6B7280; border-radius:9px; padding:8px 12px; font-size:12.5px; font-weight:600; cursor:pointer;">Annuleren</button>'
+            +   '</div>'
+            + '</div>';
+    }
+    html += '</div>';
+
+    // balance
+    if (state.showBalance) {
+      var segs = state.categories.map(function (c) {
+        var n = sched.filter(function (it) { return it.categoryId === c.id; }).length;
+        return { name: c.name, color: catColor(c.id), count: n, pct: total ? (n / total * 100).toFixed(2) : 0, label: total ? (n + ' · ' + Math.round(n / total * 100) + '%') : '0' };
+      }).filter(function (x) { return x.count > 0; });
+      html += '<div>'
+            +   '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">'
+            +     '<div style="font-size:11px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:#9AA0AB;">Verdeling</div>'
+            +     '<div style="font-size:11px; color:#B7BCC5; font-weight:500;">' + (total ? (total + ' ingepland') : '') + '</div>'
+            +   '</div>'
+            +   '<div style="display:flex; height:10px; border-radius:20px; overflow:hidden; background:#F0F1F4;">';
+      segs.forEach(function (seg) { html += '<div style="height:100%; width:' + seg.pct + '%; background:' + seg.color + ';"></div>'; });
+      html += '</div><div style="display:flex; flex-direction:column; gap:6px; margin-top:11px;">';
+      segs.forEach(function (seg) {
+        html += '<div style="display:flex; align-items:center; gap:8px;">'
+              +   '<span style="width:8px; height:8px; border-radius:50%; background:' + seg.color + ';"></span>'
+              +   '<span style="flex:1; font-size:12.5px; color:#5A606C; font-weight:500;">' + esc(seg.name) + '</span>'
+              +   '<span style="font-size:12px; color:#9AA0AB; font-weight:600;">' + esc(seg.label) + '</span>'
+              + '</div>';
+      });
+      html += '</div>';
+      if (segs.length === 0) html += '<div style="font-size:12.5px; color:#B7BCC5; margin-top:8px;">Nog niets ingepland.</div>';
+      html += '</div>';
+    }
+
+    html += '</div></aside>';
+
+    // ---------- main ----------
+    html += '<main style="flex:1; min-width:0; height:100%; display:flex; flex-direction:column;">';
+
+    // top bar
+    html += '<div style="flex:0 0 auto; min-height:58px; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:10px 24px; border-bottom:1px solid #EAEBEF; background:#FAFAFB;">'
+          +   '<div style="display:flex; align-items:center; gap:11px;">'
+          +     '<div style="font-size:15px; font-weight:700; letter-spacing:-0.01em;">Reisschema</div>'
+          +     '<div style="display:flex; align-items:center; gap:7px; background:#fff; border:1px solid #E4E6EB; border-radius:10px; padding:5px 9px;">'
+          +       '<span style="font-size:11px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:#9AA0AB;">Data</span>'
+          +       '<input type="date" data-field="holidayStart" value="' + esc(holiday.start) + '" style="border:none; background:none; font-size:13px; font-weight:600; color:#2A2E38; padding:0;" />'
+          +       '<span style="color:#C9CDD5;">→</span>'
+          +       '<input type="date" data-field="holidayEnd" value="' + esc(holiday.end) + '" style="border:none; background:none; font-size:13px; font-weight:600; color:#2A2E38; padding:0;" />'
+          +     '</div>'
+          +   '</div>'
+          +   '<div style="display:flex; align-items:center; gap:14px;">'
+          +     '<label style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:#6B7280; font-weight:600; cursor:pointer;">Palet'
+          +       '<select data-field="palette" style="border:1px solid #E4E6EB; background:#fff; border-radius:8px; padding:4px 7px; font-size:12.5px; color:#4B5160;">'
+          +         '<option value="default"' + (state.palette === 'default' ? ' selected' : '') + '>Standaard</option>'
+          +         '<option value="cool"' + (state.palette === 'cool' ? ' selected' : '') + '>Koel</option>'
+          +         '<option value="warm"' + (state.palette === 'warm' ? ' selected' : '') + '>Warm</option>'
+          +       '</select>'
+          +     '</label>'
+          +     '<label style="display:flex; align-items:center; gap:5px; font-size:12.5px; color:#6B7280; font-weight:600; cursor:pointer;"><input type="checkbox" data-field="showBalance"' + (state.showBalance ? ' checked' : '') + ' /> Verdeling</label>'
+          +     '<div style="font-size:12.5px; color:#9AA0AB;">Sleep een activiteit naar een tijdsblok · sleep terug om uit te plannen</div>'
+          +     '<div style="font-size:12.5px; color:#6B7280; font-weight:600;">' + sched.length + ' ingepland</div>'
+          +   '</div>'
+          + '</div>';
+
+    // grid
+    html += '<div style="flex:1; min-height:0; overflow:auto; padding:0;">';
+    html += '<div style="display:flex; flex-direction:column; width:max-content; min-width:100%; padding:0 0 40px;">';
+
+    // header row
+    html += '<div style="display:flex; position:sticky; top:0; z-index:5;">';
+    html += '<div style="flex:0 0 104px; width:104px; position:sticky; left:0; z-index:6; background:#FAFAFB; border-right:1px solid #C7CBD3; border-bottom:1.5px solid #C7CBD3;"></div>';
+    days.forEach(function (day) {
+      html += '<div style="flex:0 0 158px; width:158px; padding:9px 10px; text-align:center; background:' + (day.weekend ? '#FBF4E7' : '#FAFAFB') + '; border-right:1px solid #D3D7DE; border-bottom:1.5px solid #C7CBD3;">'
+            +   '<div style="font-size:11px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:' + (day.weekend ? '#B26A1F' : '#7E8490') + ';">' + WD[day.wd] + '</div>'
+            +   '<div style="font-size:13.5px; font-weight:700; color:#2A2E38; margin-top:1px;">' + MONTHS_SHORT[day.m] + ' ' + day.d + '</div>'
+            +   (day.weekend ? '<div style="display:inline-block; margin-top:3px; font-size:9.5px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#B26A1F; background:#FBEFD9; border-radius:20px; padding:1px 7px;">Weekend</div>' : '')
+            + '</div>';
+    });
+    html += '</div>';
+
+    // segment rows
+    SEGMENTS.forEach(function (seg) {
+      html += '<div style="display:flex;">';
+      html += '<div style="flex:0 0 104px; width:104px; position:sticky; left:0; z-index:2; background:#FAFAFB; border-right:1px solid #C7CBD3; border-bottom:1px solid #D3D7DE; display:flex; flex-direction:column; gap:3px; padding:11px 12px;">'
+            +   '<span style="font-size:15px; line-height:1;">' + seg.icon + '</span>'
+            +   '<span style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#7E8490;">' + seg.name + '</span>'
+            + '</div>';
+      days.forEach(function (day) {
+        var its = (byCell[day.m + '-' + day.d + '-' + seg.id] || []);
+        html += '<div class="cell" data-drop="cell" data-m="' + day.m + '" data-d="' + day.d + '" data-seg="' + seg.id + '" style="flex:0 0 158px; width:158px; min-height:96px; border-right:1px solid ' + (day.weekend ? '#E8DEC9' : '#D3D7DE') + '; border-bottom:1px solid #D3D7DE; background:' + (day.weekend ? '#FBF7EF' : '#FFFFFF') + '; padding:5px; display:flex; flex-direction:column; gap:5px;">';
+        its.forEach(function (it) {
+          var iv = itemView(it);
+          html += '<div class="chip" draggable="true" data-id="' + esc(iv.id) + '" data-action="edit" title="' + esc(iv.title) + '" style="background:' + iv.chipBg + '; border-left:3px solid ' + iv.color + '; border-radius:7px; padding:7px 9px 8px 10px; cursor:grab; display:flex; flex-direction:column; gap:3px;">'
+                +   '<span style="font-size:12px; font-weight:600; line-height:1.25; color:' + iv.chipText + ';">' + esc(iv.title) + '</span>'
+                +   '<span style="font-size:9.5px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; color:' + iv.color + ';">' + esc(iv.catName) + '</span>'
+                + '</div>';
+        });
+        html += '</div>';
+      });
+      html += '</div>';
+    });
+
+    html += '</div></div></main>';
+    return html;
+  }
+
+  // ----------------------------------------------------------------- render: modals
+  function renderNewModal() {
+    return '<div data-action="new-overlay-close" style="position:fixed; inset:0; background:rgba(20,24,33,.32); display:flex; align-items:center; justify-content:center; z-index:60; backdrop-filter:blur(1.5px);">'
+         +   '<div data-modal-card style="width:420px; max-width:92vw; background:#fff; border-radius:18px; box-shadow:0 24px 64px rgba(16,24,40,.28); overflow:hidden;">'
+         +     '<div style="padding:20px 22px 6px;">'
+         +       '<div style="font-size:17px; font-weight:700; letter-spacing:-0.01em;">Nieuwe vakantie</div>'
+         +       '<div style="font-size:13px; color:#9AA0AB; margin-top:2px;">Geef je reis een naam en kies de data.</div>'
+         +     '</div>'
+         +     '<div style="padding:14px 22px 18px;">'
+         +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB; margin-bottom:7px;">Naam van de vakantie</label>'
+         +       '<input type="text" data-field="newName" value="' + esc(state.newName) + '" placeholder="bv. Week aan zee" style="width:100%; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:15px; font-weight:600; color:#1B1E26; margin-bottom:16px;" />'
+         +       '<div style="display:flex; gap:12px;">'
+         +         '<div style="flex:1;"><label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB; margin-bottom:7px;">Van</label>'
+         +           '<input type="date" data-field="newStart" value="' + esc(state.newStart) + '" style="width:100%; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:10px 12px; font-size:14px; color:#1B1E26;" /></div>'
+         +         '<div style="flex:1;"><label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB; margin-bottom:7px;">Tot</label>'
+         +           '<input type="date" data-field="newEnd" value="' + esc(state.newEnd) + '" style="width:100%; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:10px 12px; font-size:14px; color:#1B1E26;" /></div>'
+         +       '</div>'
+         +     '</div>'
+         +     '<div style="display:flex; align-items:center; gap:9px; padding:14px 22px; border-top:1px solid #F0F1F4; background:#FAFAFB;">'
+         +       '<span style="flex:1;"></span>'
+         +       '<button class="secondary-btn" data-action="close-new" style="border:1px solid #E4E6EB; background:#fff; color:#5A606C; font-size:13px; font-weight:600; cursor:pointer; padding:9px 16px; border-radius:9px;">Annuleren</button>'
+         +       '<button class="dark-btn" data-action="create-holiday" style="border:none; background:#1B1E26; color:#fff; font-size:13px; font-weight:600; cursor:pointer; padding:9px 20px; border-radius:9px;">Vakantie aanmaken</button>'
+         +     '</div>'
+         +   '</div>'
+         + '</div>';
+  }
+
+  function renderEditor() {
+    var it = state.items.find(function (x) { return x.id === state.editorId; });
+    if (!it) return '';
+    var c = catById(it.categoryId);
+    var color = catColor(it.categoryId);
+    var scheduled = it.month != null;
+    var placement = scheduled ? (MONTHS_SHORT[it.month] + ' ' + it.day + ' · ' + segName(it.segment || 'morning')) : '';
+    var q = encodeURIComponent(((it.address || '').trim() || (it.title || '').trim()) || 'map');
+    var mapEmbed = 'https://maps.google.com/maps?q=' + q + '&z=12&output=embed';
+    var mapLink = 'https://www.google.com/maps/search/?api=1&query=' + q;
+    var categoryOptions = state.categories.map(function (cc) { return { id: cc.id, label: cc.name }; });
+
+    return '<div data-action="editor-overlay-close" style="position:fixed; inset:0; background:rgba(20,24,33,.32); display:flex; align-items:center; justify-content:center; z-index:50; backdrop-filter:blur(1.5px);">'
+         +   '<div data-modal-card style="width:440px; max-width:92vw; max-height:90vh; overflow:auto; background:#fff; border-radius:18px; box-shadow:0 24px 64px rgba(16,24,40,.28);">'
+         +     '<div style="padding:20px 22px 16px; display:flex; align-items:center; gap:11px; border-bottom:1px solid #F0F1F4;">'
+         +       '<span style="width:12px; height:12px; border-radius:50%; background:' + color + ';"></span>'
+         +       '<div style="flex:1; font-size:12px; font-weight:600; color:#9AA0AB;">' + esc(c ? c.name : '') + '</div>'
+         +       (scheduled ? '<div style="font-size:12px; font-weight:600; color:#9AA0AB; background:#F3F4F6; border-radius:20px; padding:3px 10px;">' + esc(placement) + '</div>' : '')
+         +     '</div>'
+         +     '<div style="padding:18px 22px 22px;">'
+         +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB; margin-bottom:7px;">Titel</label>'
+         +       '<input type="text" data-field="editTitle" value="' + esc(it.title) + '" style="width:100%; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:15px; font-weight:600; color:#1B1E26; margin-bottom:16px;" />'
+         +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB; margin-bottom:7px;">Categorie</label>'
+         +       '<select data-field="editCategory" style="width:100%; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:14px; color:#1B1E26; margin-bottom:16px;">' + optionsHtml(categoryOptions, it.categoryId) + '</select>'
+         +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB; margin-bottom:7px;">Adres</label>'
+         +       '<input type="text" data-field="editAddress" value="' + esc(it.address) + '" placeholder="Plaats of adres voor de kaart…" style="width:100%; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:14px; color:#1B1E26; margin-bottom:16px;" />'
+         +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB; margin-bottom:7px;">Notitie</label>'
+         +       '<textarea data-field="editNote" placeholder="Voeg een korte notitie toe…" style="width:100%; min-height:74px; resize:vertical; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:13.5px; color:#4B5160; line-height:1.5; box-sizing:border-box; display:block;">' + esc(it.note) + '</textarea>'
+         +       '<div style="display:flex; align-items:center; justify-content:space-between; margin:18px 0 7px;">'
+         +         '<label style="font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB;">Kaart</label>'
+         +         '<a class="map-link" href="' + esc(mapLink) + '" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:4px; font-size:11.5px; font-weight:600; color:#2A6FDB; text-decoration:none;">Openen in Google Maps ↗</a>'
+         +       '</div>'
+         +       '<div style="border:1px solid #E4E6EB; border-radius:11px; overflow:hidden; background:#F0F1F4;">'
+         +         '<iframe src="' + esc(mapEmbed) + '" width="100%" height="158" style="border:0; display:block;" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>'
+         +       '</div>'
+         +     '</div>'
+         +     '<div style="display:flex; align-items:center; gap:9px; padding:14px 22px; border-top:1px solid #F0F1F4; background:#FAFAFB; position:sticky; bottom:0;">'
+         +       '<button class="delete-btn" data-action="delete-item" style="border:none; background:none; color:#C0392B; font-size:13px; font-weight:600; cursor:pointer; padding:8px 4px;">Verwijderen</button>'
+         +       (scheduled ? '<button class="secondary-btn" data-action="unschedule" style="border:1px solid #E4E6EB; background:#fff; color:#5A606C; font-size:13px; font-weight:600; cursor:pointer; padding:8px 14px; border-radius:9px;">Naar activiteiten</button>' : '')
+         +       '<span style="flex:1;"></span>'
+         +       '<button class="dark-btn" data-action="close-editor" style="border:none; background:#1B1E26; color:#fff; font-size:13px; font-weight:600; cursor:pointer; padding:9px 20px; border-radius:9px;">Klaar</button>'
+         +     '</div>'
+         +   '</div>'
+         + '</div>';
+  }
+
+  // ----------------------------------------------------------------- render
+  function render() {
+    var holiday = currentHoliday();
+    var html = '<div style="display:flex; height:100vh; width:100%; overflow:hidden;">';
+    html += holiday ? renderHoliday(holiday) : renderList();
+    html += '</div>';
+    if (state.newOpen) html += renderNewModal();
+    if (state.editorId) html += renderEditor();
+    document.getElementById('app').innerHTML = html;
+  }
+
+  // ----------------------------------------------------------------- events (delegated, attached once)
+  var root = document.getElementById('app');
+  var hotEl = null;
+  function setHot(el) { if (hotEl === el) return; if (hotEl) hotEl.classList.remove('hot'); hotEl = el; if (hotEl) hotEl.classList.add('hot'); }
+  function clearHot() { if (hotEl) hotEl.classList.remove('hot'); hotEl = null; }
+
+  root.addEventListener('dragstart', function (e) {
+    var el = e.target.closest('[data-id][draggable="true"]');
+    if (!el) return;
+    state.draggingId = el.getAttribute('data-id');
+    try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', state.draggingId); } catch (x) {}
+  });
+  root.addEventListener('dragend', function () { state.draggingId = null; clearHot(); });
+  root.addEventListener('dragover', function (e) {
+    var el = e.target.closest('[data-drop]');
+    if (!el) { setHot(null); return; }
+    e.preventDefault();
+    try { e.dataTransfer.dropEffect = 'move'; } catch (x) {}
+    setHot(el);
+  });
+  root.addEventListener('drop', function (e) {
+    var el = e.target.closest('[data-drop]');
+    if (!el) return;
+    e.preventDefault();
+    clearHot();
+    if (el.getAttribute('data-drop') === 'backlog') dropToBacklog();
+    else dropToCell(parseInt(el.getAttribute('data-m'), 10), parseInt(el.getAttribute('data-d'), 10), el.getAttribute('data-seg'));
+  });
+
+  root.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-action]');
+    if (!el) return;
+    var action = el.getAttribute('data-action');
+    if (action === 'new-overlay-close') { if (!e.target.closest('[data-modal-card]')) { state.newOpen = false; render(); } return; }
+    if (action === 'editor-overlay-close') { if (!e.target.closest('[data-modal-card]')) { state.editorId = null; render(); } return; }
+    switch (action) {
+      case 'open-new': state.newOpen = true; render(); break;
+      case 'close-new': state.newOpen = false; render(); break;
+      case 'create-holiday': createHoliday(); break;
+      case 'open-holiday': state.view = el.getAttribute('data-id'); render(); break;
+      case 'delete-holiday': deleteHoliday(el.getAttribute('data-id')); break;
+      case 'back-to-list': state.view = 'list'; render(); break;
+      case 'add': addItem(); break;
+      case 'reset': resetFilters(); break;
+      case 'toggle': toggleCategory(el.getAttribute('data-id')); break;
+      case 'toggle-newcat': state.newCatOpen = !state.newCatOpen; render(); break;
+      case 'pick-color': state.newCatColor = el.getAttribute('data-color'); render(); break;
+      case 'add-category': addCategory(); break;
+      case 'edit': state.editorId = el.getAttribute('data-id'); render(); break;
+      case 'delete-item': deleteItem(state.editorId); break;
+      case 'unschedule': updateItem(state.editorId, { month: null, day: null, segment: null }); render(); break;
+      case 'close-editor': state.editorId = null; render(); break;
+    }
+  });
+
+  // text inputs: update state silently to preserve focus/caret
+  root.addEventListener('input', function (e) {
+    var f = e.target.getAttribute && e.target.getAttribute('data-field');
+    if (!f) return;
+    if (f === 'addTitle') state.addTitle = e.target.value;
+    else if (f === 'newName') state.newName = e.target.value;
+    else if (f === 'newCatName') state.newCatName = e.target.value;
+    else if (f === 'holidayName') { var h = currentHoliday(); if (h) updateHoliday(h.id, { name: e.target.value }); }
+    else if (f === 'editTitle') { if (state.editorId) updateItem(state.editorId, { title: e.target.value }); }
+    else if (f === 'editNote') { if (state.editorId) updateItem(state.editorId, { note: e.target.value }); }
+    else if (f === 'editAddress') { if (state.editorId) updateItem(state.editorId, { address: e.target.value }); } // map refreshes on blur (change)
+  });
+
+  // selects / checkboxes / date pickers: safe to re-render
+  root.addEventListener('change', function (e) {
+    var f = e.target.getAttribute && e.target.getAttribute('data-field');
+    if (!f) return;
+    if (f === 'addCategory') { state.addCategoryId = e.target.value; persist(); }
+    else if (f === 'palette') { state.palette = e.target.value; persist(); render(); }
+    else if (f === 'showBalance') { state.showBalance = e.target.checked; persist(); render(); }
+    else if (f === 'newStart') { state.newStart = e.target.value; }
+    else if (f === 'newEnd') { state.newEnd = e.target.value; }
+    else if (f === 'holidayStart') { var h1 = currentHoliday(); if (h1) { updateHoliday(h1.id, { start: e.target.value }); render(); } }
+    else if (f === 'holidayEnd') { var h2 = currentHoliday(); if (h2) { updateHoliday(h2.id, { end: e.target.value }); render(); } }
+    else if (f === 'editCategory') { if (state.editorId) { updateItem(state.editorId, { categoryId: e.target.value }); render(); } }
+    else if (f === 'editAddress') { render(); } // refresh the map embed
+  });
+
+  root.addEventListener('keydown', function (e) {
+    var f = e.target.getAttribute && e.target.getAttribute('data-field');
+    if (f === 'addTitle' && e.key === 'Enter') addItem();
+    if (f === 'newName' && e.key === 'Enter') createHoliday();
+    if (f === 'newCatName' && e.key === 'Enter') addCategory();
+    if (e.key === 'Escape') { if (state.newOpen) { state.newOpen = false; render(); } else if (state.editorId) { state.editorId = null; render(); } }
+  });
+
+  render();
+  cloud.load();
+})();
+</script>
+</body>
+</html>

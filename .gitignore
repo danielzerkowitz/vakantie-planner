@@ -1,0 +1,18 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Node (not used yet, but safe)
+node_modules/
+npm-debug.log*
+
+# Env / secrets — never commit these
+.env
+.env.*
+*.local
+
+# Vercel
+.vercel
