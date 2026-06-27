@@ -70,8 +70,10 @@
     { id:'evening',   name:'Avond',    icon:'🌙' },
   ];
   var ALLDAY = { id:'allday', name:'Hele dag', icon:'📌' };
-  // grid columns: all-day first, then the time-of-day segments
-  var GRID_COLS = [ALLDAY].concat(SEGMENTS);
+  // grid rows: all-day first, then the time-of-day segments
+  var GRID_ROWS = [ALLDAY].concat(SEGMENTS);
+  // how many day-columns fit on one page (a "week") before the ‹ › nav pages on
+  var DAYS_PER_PAGE = 7;
   var PALETTES = {
     default: { c_reis:{l:0.64,c:0.190,h:18}, c_bezoek:{l:0.62,c:0.165,h:252}, c_strand:{l:0.72,c:0.130,h:200}, c_activiteit:{l:0.70,c:0.165,h:150} },
     cool:    { c_reis:{l:0.60,c:0.110,h:300}, c_bezoek:{l:0.60,c:0.110,h:248}, c_strand:{l:0.66,c:0.100,h:200}, c_activiteit:{l:0.63,c:0.095,h:222} },
@@ -121,7 +123,7 @@
     var dd = defaultDates();
     var runtime = {
       draggingId: null, editorId: null, addTitle: '', addCategoryId: 'c_reis',
-      view: 'list', newOpen: false, newName: '', newStart: dd.start, newEnd: dd.end,
+      view: 'list', weekPage: 0, newOpen: false, newName: '', newStart: dd.start, newEnd: dd.end,
       newCatOpen: false, newCatName: '', newCatColor: CAT_COLORS[0],
       palette: 'default', showBalance: true,
     };
@@ -248,11 +250,11 @@
     if (!h) return [];
     var s = parseISO(h.start), e = parseISO(h.end);
     if (!s) return [];
-    if (!e || e < s) { return [{ m: s.getMonth(), d: s.getDate(), wd: s.getDay(), weekend: (s.getDay() === 0 || s.getDay() === 6) }]; }
+    if (!e || e < s) { return [{ m: s.getMonth(), d: s.getDate(), y: s.getFullYear(), wd: s.getDay(), weekend: (s.getDay() === 0 || s.getDay() === 6) }]; }
     var cur = new Date(s.getTime()), days = [], guard = 0;
     while (cur <= e && guard < 120) {
       var wd = cur.getDay();
-      days.push({ m: cur.getMonth(), d: cur.getDate(), wd: wd, weekend: wd === 0 || wd === 6 });
+      days.push({ m: cur.getMonth(), d: cur.getDate(), y: cur.getFullYear(), wd: wd, weekend: wd === 0 || wd === 6 });
       cur = new Date(cur.getTime() + 86400000); guard++;
     }
     return days;
@@ -263,6 +265,13 @@
     return MONTHS_SHORT[s.getMonth()] + ' ' + s.getDate() + ' – ' + MONTHS_SHORT[e.getMonth()] + ' ' + e.getDate() + ', ' + e.getFullYear();
   }
   function dayCount(h) { var s = parseISO(h.start), e = parseISO(h.end); if (!s || !e) return 0; return Math.round((e - s) / 86400000) + 1; }
+  function pageRangeLabel(pd) {
+    if (!pd || !pd.length) return '';
+    var a = pd[0], b = pd[pd.length - 1];
+    if (a === b) return MONTHS_SHORT[a.m] + ' ' + a.d;
+    if (a.m === b.m) return a.d + ' – ' + b.d + ' ' + MONTHS_SHORT[a.m];
+    return MONTHS_SHORT[a.m] + ' ' + a.d + ' – ' + MONTHS_SHORT[b.m] + ' ' + b.d;
+  }
 
   // ----------------------------------------------------------------- mutations
   function updateItem(id, patch) {
@@ -397,6 +406,14 @@
     var vis = state.items.filter(function (it) { return it.holidayId === holiday.id && state.pv[it.categoryId] !== false; });
     var days = vacationDays(holiday);
 
+    // paginate days into week-sized pages navigated with the ‹ › buttons
+    var pageCount = Math.max(1, Math.ceil(days.length / DAYS_PER_PAGE));
+    var page = Math.min(Math.max(state.weekPage || 0, 0), pageCount - 1);
+    state.weekPage = page;
+    var pageDays = days.slice(page * DAYS_PER_PAGE, page * DAYS_PER_PAGE + DAYS_PER_PAGE);
+    var today = new Date();
+    var todayKey = today.getFullYear() + '-' + today.getMonth() + '-' + today.getDate();
+
     var catCount = {};
     state.items.forEach(function (it) {
       if (it.holidayId !== holiday.id) return;
@@ -515,6 +532,18 @@
     html += '<main style="flex:1; min-width:0; height:100%; display:flex; flex-direction:column;">';
 
     // top bar
+    var navBtn = function (action, label, disabled) {
+      return '<button class="secondary-btn" data-action="' + action + '"' + (disabled ? ' disabled' : '')
+           +   ' title="' + (action === 'week-prev' ? 'Vorige week' : 'Volgende week') + '"'
+           +   ' style="display:flex; align-items:center; justify-content:center; width:30px; height:30px; border:1px solid #E4E6EB; background:#fff; color:' + (disabled ? '#C9CDD5' : '#5A606C') + '; border-radius:8px; font-size:16px; line-height:1; cursor:' + (disabled ? 'default' : 'pointer') + ';">' + label + '</button>';
+    };
+    var weekNav = pageCount > 1
+      ? '<div style="display:flex; align-items:center; gap:8px;">'
+        + navBtn('week-prev', '‹', page === 0)
+        + '<span style="font-size:12.5px; font-weight:600; color:#6B7280; min-width:96px; text-align:center;">' + esc(pageRangeLabel(pageDays)) + '</span>'
+        + navBtn('week-next', '›', page >= pageCount - 1)
+        + '</div>'
+      : '<div style="font-size:12.5px; color:#9AA0AB;">Sleep een activiteit naar een tijdsblok</div>';
     html += '<div style="flex:0 0 auto; min-height:58px; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:10px 24px; border-bottom:1px solid #EAEBEF; background:#FAFAFB;">'
           +   '<div style="display:flex; align-items:center; gap:11px;">'
           +     '<div style="font-size:15px; font-weight:700; letter-spacing:-0.01em;">Reisschema</div>'
@@ -526,40 +555,41 @@
           +     '</div>'
           +   '</div>'
           +   '<div style="display:flex; align-items:center; gap:14px;">'
-          +     '<div style="font-size:12.5px; color:#9AA0AB;">Sleep een activiteit naar een tijdsblok · sleep terug om uit te plannen</div>'
+          +     weekNav
           +     '<div style="font-size:12.5px; color:#6B7280; font-weight:600;">' + sched.length + ' ingepland</div>'
           +   '</div>'
           + '</div>';
 
-    // grid
+    // grid — days are columns (Mac-Calendar style), time segments are rows
     html += '<div style="flex:1; min-height:0; overflow:auto; padding:0;">';
-    html += '<div style="display:flex; flex-direction:column; min-width:100%; padding:0 0 40px;">';
+    html += '<div style="display:flex; flex-direction:column; min-width:100%; min-height:100%; padding:0 0 24px;">';
 
-    // header row
+    // header row: one column per day in the current page
     html += '<div style="display:flex; position:sticky; top:0; z-index:5;">';
-    html += '<div style="flex:0 0 130px; width:130px; position:sticky; left:0; z-index:6; background:#FAFAFB; border-right:1px solid #C7CBD3; border-bottom:1.5px solid #C7CBD3;"></div>';
-    GRID_COLS.forEach(function (slot) {
-      var isAll = slot.id === 'allday';
-      html += '<div style="flex:1 1 0; min-width:150px; padding:10px; text-align:center; background:' + (isAll ? '#F2F1F8' : '#FAFAFB') + '; border-right:' + (isAll ? '2px solid #C7CBD3' : '1px solid #D3D7DE') + '; border-bottom:1.5px solid #C7CBD3; display:flex; align-items:center; justify-content:center; gap:7px;">'
-            +   '<span style="font-size:15px; line-height:1;">' + slot.icon + '</span>'
-            +   '<span style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#7E8490;">' + slot.name + '</span>'
+    html += '<div style="flex:0 0 116px; width:116px; position:sticky; left:0; z-index:6; background:#FAFAFB; border-right:1px solid #C7CBD3; border-bottom:1.5px solid #C7CBD3;"></div>';
+    pageDays.forEach(function (day) {
+      var isToday = (day.y + '-' + day.m + '-' + day.d) === todayKey;
+      var headBg = day.weekend ? '#FBF4E7' : '#FAFAFB';
+      html += '<div style="flex:1 1 0; min-width:104px; padding:9px 10px; text-align:center; background:' + headBg + '; border-right:1px solid #D3D7DE; border-bottom:1.5px solid #C7CBD3; display:flex; flex-direction:column; align-items:center; gap:3px;">'
+            +   '<span style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:' + (day.weekend ? '#B26A1F' : '#7E8490') + ';">' + WD[day.wd] + '</span>'
+            +   '<span style="font-size:14px; font-weight:700; line-height:1.2; ' + (isToday ? 'color:#fff; background:#E5484D; border-radius:20px; padding:2px 9px;' : 'color:#2A2E38;') + '">' + MONTHS_SHORT[day.m] + ' ' + day.d + '</span>'
             + '</div>';
     });
     html += '</div>';
 
-    // one row per day
-    days.forEach(function (day) {
-      html += '<div style="display:flex;">';
-      html += '<div style="flex:0 0 130px; width:130px; position:sticky; left:0; z-index:2; background:' + (day.weekend ? '#FBF4E7' : '#FAFAFB') + '; border-right:1px solid #C7CBD3; border-bottom:1px solid #D3D7DE; display:flex; flex-direction:column; justify-content:center; gap:2px; padding:10px 14px;">'
-            +   '<div style="font-size:11px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:' + (day.weekend ? '#B26A1F' : '#7E8490') + ';">' + WD[day.wd] + '</div>'
-            +   '<div style="font-size:14px; font-weight:700; color:#2A2E38;">' + MONTHS_SHORT[day.m] + ' ' + day.d + '</div>'
-            +   (day.weekend ? '<div style="align-self:flex-start; margin-top:3px; font-size:9.5px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#B26A1F; background:#FBEFD9; border-radius:20px; padding:1px 7px;">Weekend</div>' : '')
+    // one row per time-of-day segment (all-day first)
+    GRID_ROWS.forEach(function (slot, ri) {
+      var isAll = slot.id === 'allday';
+      var rowBorder = isAll ? '2px solid #C7CBD3' : '1px solid #D3D7DE';
+      html += '<div style="display:flex; flex:' + (isAll ? '0 0 auto' : '1 1 0') + ';">';
+      html += '<div style="flex:0 0 116px; width:116px; position:sticky; left:0; z-index:2; background:' + (isAll ? '#F2F1F8' : '#FAFAFB') + '; border-right:1px solid #C7CBD3; border-bottom:' + rowBorder + '; display:flex; align-items:center; gap:8px; padding:10px 12px;">'
+            +   '<span style="font-size:15px; line-height:1;">' + slot.icon + '</span>'
+            +   '<span style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:#7E8490;">' + slot.name + '</span>'
             + '</div>';
-      GRID_COLS.forEach(function (slot) {
-        var isAll = slot.id === 'allday';
+      pageDays.forEach(function (day) {
         var its = (byCell[day.m + '-' + day.d + '-' + slot.id] || []);
         var cellBg = isAll ? (day.weekend ? '#FAF6EF' : '#FBFAFE') : (day.weekend ? '#FBF7EF' : '#FFFFFF');
-        html += '<div class="cell" data-drop="cell" data-m="' + day.m + '" data-d="' + day.d + '" data-seg="' + slot.id + '" style="flex:1 1 0; min-width:150px; min-height:88px; border-right:' + (isAll ? '2px solid #D3D7DE' : '1px solid ' + (day.weekend ? '#E8DEC9' : '#D3D7DE')) + '; border-bottom:1px solid #D3D7DE; background:' + cellBg + '; padding:5px; display:flex; flex-direction:column; gap:5px;">';
+        html += '<div class="cell" data-drop="cell" data-m="' + day.m + '" data-d="' + day.d + '" data-seg="' + slot.id + '" style="flex:1 1 0; min-width:104px; min-height:' + (isAll ? '56px' : '104px') + '; border-right:1px solid ' + (day.weekend ? '#E8DEC9' : '#D3D7DE') + '; border-bottom:' + rowBorder + '; background:' + cellBg + '; padding:5px; display:flex; flex-direction:column; gap:5px;">';
         its.forEach(function (it) {
           var iv = itemView(it);
           html += '<div class="chip" draggable="true" data-id="' + esc(iv.id) + '" data-action="edit" title="' + esc(iv.title) + '" style="background:' + iv.chipBg + '; border-left:3px solid ' + iv.color + '; border-radius:7px; padding:7px 9px 8px 10px; cursor:grab; display:flex; flex-direction:column; gap:3px;">'
@@ -757,7 +787,9 @@
       case 'open-new': state.newOpen = true; render(); break;
       case 'close-new': state.newOpen = false; render(); break;
       case 'create-holiday': createHoliday(); break;
-      case 'open-holiday': state.view = el.getAttribute('data-id'); render(); break;
+      case 'open-holiday': state.view = el.getAttribute('data-id'); state.weekPage = 0; render(); break;
+      case 'week-prev': if (state.weekPage > 0) { state.weekPage--; render(); } break;
+      case 'week-next': state.weekPage = (state.weekPage || 0) + 1; render(); break;
       case 'delete-holiday': deleteHoliday(el.getAttribute('data-id')); break;
       case 'back-to-list': state.view = 'list'; render(); break;
       case 'add': addItem(); break;
