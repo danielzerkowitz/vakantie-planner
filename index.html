@@ -35,6 +35,7 @@
   .newcat-btn:hover { border-color:#B9BDC6 !important; color:#6B7280 !important; }
   .chip:hover { filter:brightness(0.98); }
   .map-link:hover { text-decoration:underline !important; }
+  .addr-pick:hover { background:#F3F4F6 !important; }
   .delete-btn:hover { color:#96281c !important; }
 
   /* drag-over highlight */
@@ -522,14 +523,6 @@
           +     '</div>'
           +   '</div>'
           +   '<div style="display:flex; align-items:center; gap:14px;">'
-          +     '<label style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:#6B7280; font-weight:600; cursor:pointer;">Palet'
-          +       '<select data-field="palette" style="border:1px solid #E4E6EB; background:#fff; border-radius:8px; padding:4px 7px; font-size:12.5px; color:#4B5160;">'
-          +         '<option value="default"' + (state.palette === 'default' ? ' selected' : '') + '>Standaard</option>'
-          +         '<option value="cool"' + (state.palette === 'cool' ? ' selected' : '') + '>Koel</option>'
-          +         '<option value="warm"' + (state.palette === 'warm' ? ' selected' : '') + '>Warm</option>'
-          +       '</select>'
-          +     '</label>'
-          +     '<label style="display:flex; align-items:center; gap:5px; font-size:12.5px; color:#6B7280; font-weight:600; cursor:pointer;"><input type="checkbox" data-field="showBalance"' + (state.showBalance ? ' checked' : '') + ' /> Verdeling</label>'
           +     '<div style="font-size:12.5px; color:#9AA0AB;">Sleep een activiteit naar een tijdsblok · sleep terug om uit te plannen</div>'
           +     '<div style="font-size:12.5px; color:#6B7280; font-weight:600;">' + sched.length + ' ingepland</div>'
           +   '</div>'
@@ -617,12 +610,13 @@
     var mapLink = 'https://www.google.com/maps/search/?api=1&query=' + q;
     var categoryOptions = state.categories.map(function (cc) { return { id: cc.id, label: cc.name }; });
 
-    return '<div data-action="editor-overlay-close" style="position:fixed; inset:0; background:rgba(20,24,33,.32); display:flex; align-items:center; justify-content:center; z-index:50; backdrop-filter:blur(1.5px);">'
+    return '<div style="position:fixed; inset:0; background:rgba(20,24,33,.32); display:flex; align-items:center; justify-content:center; z-index:50; backdrop-filter:blur(1.5px);">'
          +   '<div data-modal-card style="width:440px; max-width:92vw; max-height:90vh; overflow:auto; background:#fff; border-radius:18px; box-shadow:0 24px 64px rgba(16,24,40,.28);">'
          +     '<div style="padding:20px 22px 16px; display:flex; align-items:center; gap:11px; border-bottom:1px solid #F0F1F4;">'
          +       '<span style="width:12px; height:12px; border-radius:50%; background:' + color + ';"></span>'
          +       '<div style="flex:1; font-size:12px; font-weight:600; color:#9AA0AB;">' + esc(c ? c.name : '') + '</div>'
          +       (scheduled ? '<div style="font-size:12px; font-weight:600; color:#9AA0AB; background:#F3F4F6; border-radius:20px; padding:3px 10px;">' + esc(placement) + '</div>' : '')
+         +       '<button class="card-del" data-action="close-editor" title="Sluiten" style="border:none; background:none; color:#C9CDD5; font-size:20px; line-height:1; cursor:pointer; padding:2px 5px; border-radius:6px; margin:-2px -4px -2px 0;">×</button>'
          +     '</div>'
          +     '<div style="padding:18px 22px 22px;">'
          +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB; margin-bottom:7px;">Titel</label>'
@@ -630,9 +624,12 @@
          +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB; margin-bottom:7px;">Categorie</label>'
          +       '<select data-field="editCategory" style="width:100%; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:14px; color:#1B1E26; margin-bottom:16px;">' + optionsHtml(categoryOptions, it.categoryId) + '</select>'
          +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB; margin-bottom:7px;">Tijd <span style="font-weight:600; text-transform:none; letter-spacing:0; color:#B7BCC5;">(optioneel)</span></label>'
-         +       '<input type="time" data-field="editTime" value="' + esc(it.time || '') + '" style="width:100%; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:14px; color:#1B1E26; margin-bottom:16px;" />'
+         +       '<input type="time" data-field="editTime" lang="nl-NL" step="60" value="' + esc(it.time || '') + '" style="width:100%; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:14px; color:#1B1E26; margin-bottom:16px;" />'
          +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB; margin-bottom:7px;">Adres</label>'
-         +       '<input type="text" data-field="editAddress" value="' + esc(it.address) + '" placeholder="Plaats of adres voor de kaart…" style="width:100%; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:14px; color:#1B1E26; margin-bottom:16px;" />'
+         +       '<div style="position:relative; margin-bottom:16px;">'
+         +         '<input type="text" data-field="editAddress" autocomplete="off" value="' + esc(it.address) + '" placeholder="Plaats of adres voor de kaart…" style="width:100%; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:14px; color:#1B1E26;" />'
+         +         '<div data-addr-suggest style="position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:30; background:#fff; border:1px solid #E4E6EB; border-radius:11px; box-shadow:0 10px 28px rgba(16,24,40,.14); overflow:hidden; display:none;"></div>'
+         +       '</div>'
          +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB; margin-bottom:7px;">Notitie</label>'
          +       '<textarea data-field="editNote" placeholder="Voeg een korte notitie toe…" style="width:100%; min-height:74px; resize:vertical; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:13.5px; color:#4B5160; line-height:1.5; box-sizing:border-box; display:block; margin-bottom:16px;">' + esc(it.note) + '</textarea>'
          +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB; margin-bottom:7px;">URL <span style="font-weight:600; text-transform:none; letter-spacing:0; color:#B7BCC5;">(optioneel)</span></label>'
@@ -695,7 +692,51 @@
     else dropToCell(parseInt(el.getAttribute('data-m'), 10), parseInt(el.getAttribute('data-d'), 10), el.getAttribute('data-seg'));
   });
 
+  // ----------------------------------------------------------------- address autocomplete (OpenStreetMap / Nominatim, keyless)
+  var addrAC = (function () {
+    var timer = null, lastQ = '';
+    function box() { return document.querySelector('[data-addr-suggest]'); }
+    function hide() { var b = box(); if (b) { b.style.display = 'none'; b.innerHTML = ''; b._items = null; } }
+    function show(list) {
+      var b = box(); if (!b) return;
+      if (!list || !list.length) { hide(); return; }
+      b._items = list;
+      b.innerHTML = list.map(function (p, i) {
+        return '<div class="addr-pick" data-addr-pick="' + i + '" style="padding:9px 12px; font-size:13px; color:#2A2E38; cursor:pointer; border-bottom:1px solid #F2F3F5; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="' + esc(p.display_name) + '">' + esc(p.display_name) + '</div>';
+      }).join('');
+      b.style.display = 'block';
+    }
+    function query(q) {
+      if (timer) clearTimeout(timer);
+      q = (q || '').trim();
+      if (q.length < 3) { hide(); return; }
+      timer = setTimeout(function () {
+        lastQ = q;
+        fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&accept-language=nl,en&q=' + encodeURIComponent(q))
+          .then(function (r) { return r.ok ? r.json() : []; })
+          .then(function (list) { if (q === lastQ) show(list); })
+          .catch(function () {});
+      }, 350);
+    }
+    function pick(i) {
+      var b = box(); if (!b || !b._items) return;
+      var p = b._items[i]; if (!p) return;
+      if (state.editorId) updateItem(state.editorId, { address: p.display_name });
+      hide();
+      render();
+    }
+    return { query: query, hide: hide, pick: pick };
+  })();
+
+  // hide the suggestions when the address field loses focus (delay lets a click register)
+  root.addEventListener('focusout', function (e) {
+    var f = e.target.getAttribute && e.target.getAttribute('data-field');
+    if (f === 'editAddress') setTimeout(function () { addrAC.hide(); }, 150);
+  });
+
   root.addEventListener('click', function (e) {
+    var pickEl = e.target.closest('[data-addr-pick]');
+    if (pickEl) { addrAC.pick(parseInt(pickEl.getAttribute('data-addr-pick'), 10)); return; }
     var el = e.target.closest('[data-action]');
     if (!el) return;
     var action = el.getAttribute('data-action');
@@ -733,7 +774,7 @@
     else if (f === 'editNote') { if (state.editorId) updateItem(state.editorId, { note: e.target.value }); }
     else if (f === 'editTime') { if (state.editorId) updateItem(state.editorId, { time: e.target.value }); }
     else if (f === 'editUrl') { if (state.editorId) updateItem(state.editorId, { url: e.target.value }); }
-    else if (f === 'editAddress') { if (state.editorId) updateItem(state.editorId, { address: e.target.value }); } // map refreshes on blur (change)
+    else if (f === 'editAddress') { if (state.editorId) updateItem(state.editorId, { address: e.target.value }); addrAC.query(e.target.value); } // map refreshes on blur (change)
   });
 
   // selects / checkboxes / date pickers: safe to re-render
@@ -756,7 +797,11 @@
     if (f === 'addTitle' && e.key === 'Enter') addItem();
     if (f === 'newName' && e.key === 'Enter') createHoliday();
     if (f === 'newCatName' && e.key === 'Enter') addCategory();
-    if (e.key === 'Escape') { if (state.newOpen) { state.newOpen = false; render(); } else if (state.editorId) { state.editorId = null; render(); } }
+    if (e.key === 'Escape') {
+      var sb = document.querySelector('[data-addr-suggest]');
+      if (sb && sb.style.display !== 'none') { addrAC.hide(); return; }
+      if (state.newOpen) { state.newOpen = false; render(); } else if (state.editorId) { state.editorId = null; render(); }
+    }
   });
 
   render();
