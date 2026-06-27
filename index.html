@@ -69,6 +69,9 @@
     { id:'afternoon', name:'Namiddag', icon:'⛱️' },
     { id:'evening',   name:'Avond',    icon:'🌙' },
   ];
+  var ALLDAY = { id:'allday', name:'Hele dag', icon:'📌' };
+  // grid columns: all-day first, then the time-of-day segments
+  var GRID_COLS = [ALLDAY].concat(SEGMENTS);
   var PALETTES = {
     default: { c_reis:{l:0.64,c:0.190,h:18}, c_bezoek:{l:0.62,c:0.165,h:252}, c_strand:{l:0.72,c:0.130,h:200}, c_activiteit:{l:0.70,c:0.165,h:150} },
     cool:    { c_reis:{l:0.60,c:0.110,h:300}, c_bezoek:{l:0.60,c:0.110,h:248}, c_strand:{l:0.66,c:0.100,h:200}, c_activiteit:{l:0.63,c:0.095,h:222} },
@@ -238,7 +241,7 @@
     if (!b) return '#9AA0AB';
     return 'oklch(' + b.l + ' ' + b.c + ' ' + b.h + ')';
   }
-  function segName(id) { var s = SEGMENTS.find(function (x) { return x.id === id; }); return s ? s.name : ''; }
+  function segName(id) { if (id === 'allday') return ALLDAY.name; var s = SEGMENTS.find(function (x) { return x.id === id; }); return s ? s.name : ''; }
   function currentHoliday() { return state.holidays.find(function (h) { return h.id === state.view; }) || null; }
 
   function vacationDays(h) {
@@ -530,30 +533,33 @@
 
     // grid
     html += '<div style="flex:1; min-height:0; overflow:auto; padding:0;">';
-    html += '<div style="display:flex; flex-direction:column; width:max-content; min-width:100%; padding:0 0 40px;">';
+    html += '<div style="display:flex; flex-direction:column; min-width:100%; padding:0 0 40px;">';
 
     // header row
     html += '<div style="display:flex; position:sticky; top:0; z-index:5;">';
-    html += '<div style="flex:0 0 104px; width:104px; position:sticky; left:0; z-index:6; background:#FAFAFB; border-right:1px solid #C7CBD3; border-bottom:1.5px solid #C7CBD3;"></div>';
-    days.forEach(function (day) {
-      html += '<div style="flex:0 0 158px; width:158px; padding:9px 10px; text-align:center; background:' + (day.weekend ? '#FBF4E7' : '#FAFAFB') + '; border-right:1px solid #D3D7DE; border-bottom:1.5px solid #C7CBD3;">'
-            +   '<div style="font-size:11px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:' + (day.weekend ? '#B26A1F' : '#7E8490') + ';">' + WD[day.wd] + '</div>'
-            +   '<div style="font-size:13.5px; font-weight:700; color:#2A2E38; margin-top:1px;">' + MONTHS_SHORT[day.m] + ' ' + day.d + '</div>'
-            +   (day.weekend ? '<div style="display:inline-block; margin-top:3px; font-size:9.5px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#B26A1F; background:#FBEFD9; border-radius:20px; padding:1px 7px;">Weekend</div>' : '')
+    html += '<div style="flex:0 0 130px; width:130px; position:sticky; left:0; z-index:6; background:#FAFAFB; border-right:1px solid #C7CBD3; border-bottom:1.5px solid #C7CBD3;"></div>';
+    GRID_COLS.forEach(function (slot) {
+      var isAll = slot.id === 'allday';
+      html += '<div style="flex:1 1 0; min-width:150px; padding:10px; text-align:center; background:' + (isAll ? '#F2F1F8' : '#FAFAFB') + '; border-right:' + (isAll ? '2px solid #C7CBD3' : '1px solid #D3D7DE') + '; border-bottom:1.5px solid #C7CBD3; display:flex; align-items:center; justify-content:center; gap:7px;">'
+            +   '<span style="font-size:15px; line-height:1;">' + slot.icon + '</span>'
+            +   '<span style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#7E8490;">' + slot.name + '</span>'
             + '</div>';
     });
     html += '</div>';
 
-    // segment rows
-    SEGMENTS.forEach(function (seg) {
+    // one row per day
+    days.forEach(function (day) {
       html += '<div style="display:flex;">';
-      html += '<div style="flex:0 0 104px; width:104px; position:sticky; left:0; z-index:2; background:#FAFAFB; border-right:1px solid #C7CBD3; border-bottom:1px solid #D3D7DE; display:flex; flex-direction:column; gap:3px; padding:11px 12px;">'
-            +   '<span style="font-size:15px; line-height:1;">' + seg.icon + '</span>'
-            +   '<span style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#7E8490;">' + seg.name + '</span>'
+      html += '<div style="flex:0 0 130px; width:130px; position:sticky; left:0; z-index:2; background:' + (day.weekend ? '#FBF4E7' : '#FAFAFB') + '; border-right:1px solid #C7CBD3; border-bottom:1px solid #D3D7DE; display:flex; flex-direction:column; justify-content:center; gap:2px; padding:10px 14px;">'
+            +   '<div style="font-size:11px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:' + (day.weekend ? '#B26A1F' : '#7E8490') + ';">' + WD[day.wd] + '</div>'
+            +   '<div style="font-size:14px; font-weight:700; color:#2A2E38;">' + MONTHS_SHORT[day.m] + ' ' + day.d + '</div>'
+            +   (day.weekend ? '<div style="align-self:flex-start; margin-top:3px; font-size:9.5px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#B26A1F; background:#FBEFD9; border-radius:20px; padding:1px 7px;">Weekend</div>' : '')
             + '</div>';
-      days.forEach(function (day) {
-        var its = (byCell[day.m + '-' + day.d + '-' + seg.id] || []);
-        html += '<div class="cell" data-drop="cell" data-m="' + day.m + '" data-d="' + day.d + '" data-seg="' + seg.id + '" style="flex:0 0 158px; width:158px; min-height:96px; border-right:1px solid ' + (day.weekend ? '#E8DEC9' : '#D3D7DE') + '; border-bottom:1px solid #D3D7DE; background:' + (day.weekend ? '#FBF7EF' : '#FFFFFF') + '; padding:5px; display:flex; flex-direction:column; gap:5px;">';
+      GRID_COLS.forEach(function (slot) {
+        var isAll = slot.id === 'allday';
+        var its = (byCell[day.m + '-' + day.d + '-' + slot.id] || []);
+        var cellBg = isAll ? (day.weekend ? '#FAF6EF' : '#FBFAFE') : (day.weekend ? '#FBF7EF' : '#FFFFFF');
+        html += '<div class="cell" data-drop="cell" data-m="' + day.m + '" data-d="' + day.d + '" data-seg="' + slot.id + '" style="flex:1 1 0; min-width:150px; min-height:88px; border-right:' + (isAll ? '2px solid #D3D7DE' : '1px solid ' + (day.weekend ? '#E8DEC9' : '#D3D7DE')) + '; border-bottom:1px solid #D3D7DE; background:' + cellBg + '; padding:5px; display:flex; flex-direction:column; gap:5px;">';
         its.forEach(function (it) {
           var iv = itemView(it);
           html += '<div class="chip" draggable="true" data-id="' + esc(iv.id) + '" data-action="edit" title="' + esc(iv.title) + '" style="background:' + iv.chipBg + '; border-left:3px solid ' + iv.color + '; border-radius:7px; padding:7px 9px 8px 10px; cursor:grab; display:flex; flex-direction:column; gap:3px;">'
@@ -623,6 +629,11 @@
          +       '<input type="text" data-field="editTitle" value="' + esc(it.title) + '" style="width:100%; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:15px; font-weight:600; color:#1B1E26; margin-bottom:16px;" />'
          +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB; margin-bottom:7px;">Categorie</label>'
          +       '<select data-field="editCategory" style="width:100%; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:14px; color:#1B1E26; margin-bottom:16px;">' + optionsHtml(categoryOptions, it.categoryId) + '</select>'
+         +       (scheduled ? '<label style="display:flex; align-items:center; gap:10px; margin-bottom:16px; padding:11px 13px; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; cursor:pointer; user-select:none;">'
+         +         '<input type="checkbox" data-field="editAllDay"' + (it.segment === 'allday' ? ' checked' : '') + ' style="width:16px; height:16px; cursor:pointer; accent-color:#1B1E26;" />'
+         +         '<span style="flex:1; font-size:14px; font-weight:600; color:#1B1E26;">Hele dag</span>'
+         +         '<span style="font-size:11.5px; color:#9AA0AB;">Geen vast tijdsblok</span>'
+         +       '</label>' : '')
          +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB; margin-bottom:7px;">Tijd <span style="font-weight:600; text-transform:none; letter-spacing:0; color:#B7BCC5;">(optioneel)</span></label>'
          +       '<input type="time" data-field="editTime" lang="nl-NL" step="60" value="' + esc(it.time || '') + '" style="width:100%; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:14px; color:#1B1E26; margin-bottom:16px;" />'
          +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB; margin-bottom:7px;">Adres</label>'
@@ -789,6 +800,7 @@
     else if (f === 'holidayStart') { var h1 = currentHoliday(); if (h1) { updateHoliday(h1.id, { start: e.target.value }); render(); } }
     else if (f === 'holidayEnd') { var h2 = currentHoliday(); if (h2) { updateHoliday(h2.id, { end: e.target.value }); render(); } }
     else if (f === 'editCategory') { if (state.editorId) { updateItem(state.editorId, { categoryId: e.target.value }); render(); } }
+    else if (f === 'editAllDay') { if (state.editorId) { updateItem(state.editorId, { segment: e.target.checked ? 'allday' : 'morning' }); render(); } }
     else if (f === 'editAddress') { render(); } // refresh the map embed
   });
 
