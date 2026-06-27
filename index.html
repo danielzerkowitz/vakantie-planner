@@ -132,7 +132,7 @@
             var scheduled = it.month != null;
             return {
               id: it.id, holidayId: it.holidayId, title: it.title, categoryId: it.categoryId,
-              address: it.address || '', note: it.note || '',
+              address: it.address || '', note: it.note || '', time: it.time || '', url: it.url || '',
               month: scheduled ? it.month : null,
               day: scheduled ? (it.day || 1) : null,
               segment: scheduled ? (it.segment || 'morning') : null
@@ -174,7 +174,7 @@
         var scheduled = it.month != null;
         return {
           id: it.id, holidayId: it.holidayId, title: it.title, categoryId: it.categoryId,
-          address: it.address || '', note: it.note || '',
+          address: it.address || '', note: it.note || '', time: it.time || '', url: it.url || '',
           month: scheduled ? it.month : null,
           day: scheduled ? (it.day || 1) : null,
           segment: scheduled ? (it.segment || 'morning') : null
@@ -297,7 +297,7 @@
   }
   function addItem() {
     var title = (state.addTitle || '').trim(); if (!title) return;
-    var it = { id: 'it_' + Date.now(), holidayId: state.view, title: title, categoryId: state.addCategoryId, address: '', note: '', month: null, day: null, segment: null };
+    var it = { id: 'it_' + Date.now(), holidayId: state.view, title: title, categoryId: state.addCategoryId, address: '', note: '', time: '', url: '', month: null, day: null, segment: null };
     state.items = state.items.concat([it]); state.addTitle = '';
     persist(); render();
   }
@@ -564,6 +564,7 @@
         its.forEach(function (it) {
           var iv = itemView(it);
           html += '<div class="chip" draggable="true" data-id="' + esc(iv.id) + '" data-action="edit" title="' + esc(iv.title) + '" style="background:' + iv.chipBg + '; border-left:3px solid ' + iv.color + '; border-radius:7px; padding:7px 9px 8px 10px; cursor:grab; display:flex; flex-direction:column; gap:3px;">'
+                +   (it.time ? '<span style="font-size:10px; font-weight:800; letter-spacing:0.02em; color:' + iv.color + ';">' + esc(it.time) + '</span>' : '')
                 +   '<span style="font-size:12px; font-weight:600; line-height:1.25; color:' + iv.chipText + ';">' + esc(iv.title) + '</span>'
                 +   '<span style="font-size:9.5px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; color:' + iv.color + ';">' + esc(iv.catName) + '</span>'
                 + '</div>';
@@ -628,10 +629,14 @@
          +       '<input type="text" data-field="editTitle" value="' + esc(it.title) + '" style="width:100%; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:15px; font-weight:600; color:#1B1E26; margin-bottom:16px;" />'
          +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB; margin-bottom:7px;">Categorie</label>'
          +       '<select data-field="editCategory" style="width:100%; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:14px; color:#1B1E26; margin-bottom:16px;">' + optionsHtml(categoryOptions, it.categoryId) + '</select>'
+         +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB; margin-bottom:7px;">Tijd <span style="font-weight:600; text-transform:none; letter-spacing:0; color:#B7BCC5;">(optioneel)</span></label>'
+         +       '<input type="time" data-field="editTime" value="' + esc(it.time || '') + '" style="width:100%; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:14px; color:#1B1E26; margin-bottom:16px;" />'
          +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB; margin-bottom:7px;">Adres</label>'
          +       '<input type="text" data-field="editAddress" value="' + esc(it.address) + '" placeholder="Plaats of adres voor de kaart…" style="width:100%; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:14px; color:#1B1E26; margin-bottom:16px;" />'
          +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB; margin-bottom:7px;">Notitie</label>'
-         +       '<textarea data-field="editNote" placeholder="Voeg een korte notitie toe…" style="width:100%; min-height:74px; resize:vertical; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:13.5px; color:#4B5160; line-height:1.5; box-sizing:border-box; display:block;">' + esc(it.note) + '</textarea>'
+         +       '<textarea data-field="editNote" placeholder="Voeg een korte notitie toe…" style="width:100%; min-height:74px; resize:vertical; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:13.5px; color:#4B5160; line-height:1.5; box-sizing:border-box; display:block; margin-bottom:16px;">' + esc(it.note) + '</textarea>'
+         +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB; margin-bottom:7px;">URL <span style="font-weight:600; text-transform:none; letter-spacing:0; color:#B7BCC5;">(optioneel)</span></label>'
+         +       '<input type="url" data-field="editUrl" value="' + esc(it.url || '') + '" placeholder="https://…" style="width:100%; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:14px; color:#1B1E26;" />'
          +       '<div style="display:flex; align-items:center; justify-content:space-between; margin:18px 0 7px;">'
          +         '<label style="font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB;">Kaart</label>'
          +         '<a class="map-link" href="' + esc(mapLink) + '" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:4px; font-size:11.5px; font-weight:600; color:#2A6FDB; text-decoration:none;">Openen in Google Maps ↗</a>'
@@ -726,6 +731,8 @@
     else if (f === 'holidayName') { var h = currentHoliday(); if (h) updateHoliday(h.id, { name: e.target.value }); }
     else if (f === 'editTitle') { if (state.editorId) updateItem(state.editorId, { title: e.target.value }); }
     else if (f === 'editNote') { if (state.editorId) updateItem(state.editorId, { note: e.target.value }); }
+    else if (f === 'editTime') { if (state.editorId) updateItem(state.editorId, { time: e.target.value }); }
+    else if (f === 'editUrl') { if (state.editorId) updateItem(state.editorId, { url: e.target.value }); }
     else if (f === 'editAddress') { if (state.editorId) updateItem(state.editorId, { address: e.target.value }); } // map refreshes on blur (change)
   });
 
