@@ -733,6 +733,14 @@
     var mapEmbed = 'https://maps.google.com/maps?q=' + q + '&z=12&output=embed';
     var mapLink = 'https://www.google.com/maps/search/?api=1&query=' + q;
     var categoryOptions = state.categories.map(function (cc) { return { id: cc.id, label: cc.name }; });
+    // 24h time, built from explicit hour/minute selects so the picker never falls back to AM/PM
+    var tparts = (it.time || '').split(':');
+    var th = tparts[0] || '', tm = tparts[1] || '';
+    var hourOpts = '<option value="">--</option>';
+    for (var H = 0; H < 24; H++) { var hv = ('0' + H).slice(-2); hourOpts += '<option value="' + hv + '"' + (hv === th ? ' selected' : '') + '>' + hv + '</option>'; }
+    var minOpts = '<option value="">--</option>';
+    for (var M = 0; M < 60; M++) { var mv = ('0' + M).slice(-2); minOpts += '<option value="' + mv + '"' + (mv === tm ? ' selected' : '') + '>' + mv + '</option>'; }
+    var timeSelStyle = 'flex:1; min-width:0; border:1px solid #D4D7DD; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:14px; color:#1B1E26;';
 
     return '<div style="position:fixed; inset:0; background:rgba(20,24,33,.32); display:flex; align-items:center; justify-content:center; z-index:50; backdrop-filter:blur(1.5px);">'
          +   '<div data-modal-card style="width:440px; max-width:92vw; max-height:90vh; overflow:auto; background:#fff; border-radius:18px; box-shadow:0 24px 64px rgba(16,24,40,.28);">'
@@ -753,7 +761,11 @@
          +         '<span style="font-size:11.5px; color:#6F757F;">Geen vast tijdsblok</span>'
          +       '</label>' : '')
          +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#6F757F; margin-bottom:7px;">Tijd <span style="font-weight:600; text-transform:none; letter-spacing:0; color:#858B96;">(optioneel)</span></label>'
-         +       '<input type="time" data-field="editTime" lang="nl-NL" step="60" value="' + esc(it.time || '') + '" style="width:100%; border:1px solid #D4D7DD; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:14px; color:#1B1E26; margin-bottom:16px;" />'
+         +       '<div style="display:flex; align-items:center; gap:8px; margin-bottom:16px;">'
+         +         '<select data-field="editTimeHour" style="' + timeSelStyle + '">' + hourOpts + '</select>'
+         +         '<span style="font-size:15px; font-weight:700; color:#6F757F;">:</span>'
+         +         '<select data-field="editTimeMin" style="' + timeSelStyle + '">' + minOpts + '</select>'
+         +       '</div>'
          +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#6F757F; margin-bottom:7px;">Adres</label>'
          +       '<div style="position:relative; margin-bottom:16px;">'
          +         '<input type="text" data-field="editAddress" autocomplete="off" value="' + esc(it.address) + '" placeholder="Plaats of adres voor de kaart…" style="width:100%; border:1px solid #D4D7DD; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:14px; color:#1B1E26;" />'
@@ -905,7 +917,6 @@
     else if (f === 'holidayName') { var h = currentHoliday(); if (h) updateHoliday(h.id, { name: e.target.value }); }
     else if (f === 'editTitle') { if (state.editorId) updateItem(state.editorId, { title: e.target.value }); }
     else if (f === 'editNote') { if (state.editorId) updateItem(state.editorId, { note: e.target.value }); }
-    else if (f === 'editTime') { if (state.editorId) updateItem(state.editorId, { time: e.target.value }); }
     else if (f === 'editUrl') { if (state.editorId) updateItem(state.editorId, { url: e.target.value }); }
     else if (f === 'editAddress') { if (state.editorId) updateItem(state.editorId, { address: e.target.value }); addrAC.query(e.target.value); } // map refreshes on blur (change)
   });
@@ -921,6 +932,14 @@
     else if (f === 'newEnd') { state.newEnd = e.target.value; }
     else if (f === 'holidayStart') { var h1 = currentHoliday(); if (h1) { updateHoliday(h1.id, { start: e.target.value }); render(); } }
     else if (f === 'holidayEnd') { var h2 = currentHoliday(); if (h2) { updateHoliday(h2.id, { end: e.target.value }); render(); } }
+    else if (f === 'editTimeHour' || f === 'editTimeMin') {
+      if (state.editorId) {
+        var hEl = root.querySelector('[data-field="editTimeHour"]'), mEl = root.querySelector('[data-field="editTimeMin"]');
+        var hh = hEl ? hEl.value : '', mm = mEl ? mEl.value : '';
+        updateItem(state.editorId, { time: hh ? hh + ':' + (mm || '00') : '' });
+        render();
+      }
+    }
     else if (f === 'editCategory') { if (state.editorId) { updateItem(state.editorId, { categoryId: e.target.value }); render(); } }
     else if (f === 'editAllDay') { if (state.editorId) { updateItem(state.editorId, { segment: e.target.checked ? 'allday' : 'morning' }); render(); } }
     else if (f === 'editAddress') { render(); } // refresh the map embed
