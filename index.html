@@ -12,7 +12,7 @@
   html, body { margin: 0; padding: 0; }
   body {
     font-family: 'Source Sans 3', system-ui, -apple-system, sans-serif;
-    background: #F4F5F7; color: #1B1E26;
+    background: #EBEDF0; color: #1B1E26;
     -webkit-font-smoothing: antialiased; font-size: 14px;
   }
   ::-webkit-scrollbar { width: 10px; height: 10px; }
@@ -27,12 +27,12 @@
   .secondary-btn:hover { background:#F3F4F6 !important; }
   .holiday-card:hover { box-shadow:0 8px 22px rgba(16,24,40,.10) !important; transform:translateY(-2px); }
   .card-del:hover { background:#F3F4F6 !important; color:#C0392B !important; }
-  .add-card:hover { border-color:#B9BDC6 !important; color:#6B7280 !important; background:#fff !important; }
-  .back-btn:hover { color:#6B7280 !important; }
-  .backlog-item:hover { border-color:#DCDEE5 !important; box-shadow:0 2px 6px rgba(16,24,40,.07) !important; }
+  .add-card:hover { border-color:#B9BDC6 !important; color:#515763 !important; background:#fff !important; }
+  .back-btn:hover { color:#515763 !important; }
+  .backlog-item:hover { border-color:#CCCFD7 !important; box-shadow:0 2px 6px rgba(16,24,40,.07) !important; }
   .cat-row:hover { background:#FAFAFB; }
-  .reset-btn:hover { color:#6B7280 !important; }
-  .newcat-btn:hover { border-color:#B9BDC6 !important; color:#6B7280 !important; }
+  .reset-btn:hover { color:#515763 !important; }
+  .newcat-btn:hover { border-color:#B9BDC6 !important; color:#515763 !important; }
   .chip:hover { filter:brightness(0.98); }
   .map-link:hover { text-decoration:underline !important; }
   .addr-pick:hover { background:#F3F4F6 !important; }
@@ -240,7 +240,7 @@
     var cat = catById(id);
     if (cat && cat.color) return cat.color;
     var b = palette()[id];
-    if (!b) return '#9AA0AB';
+    if (!b) return '#6F757F';
     return 'oklch(' + b.l + ' ' + b.c + ' ' + b.h + ')';
   }
   function segName(id) { if (id === 'allday') return ALLDAY.name; var s = SEGMENTS.find(function (x) { return x.id === id; }); return s ? s.name : ''; }
@@ -334,7 +334,7 @@
     return {
       id: it.id, title: it.title, color: color,
       chipBg: 'color-mix(in oklab, ' + color + ' 15%, #ffffff)',
-      chipText: 'color-mix(in oklab, ' + color + ' 68%, #181b22)',
+      chipText: 'color-mix(in oklab, ' + color + ' 62%, #141519)',
       catName: c ? c.name : ''
     };
   }
@@ -345,21 +345,21 @@
   }
   function backlogItem(it) {
     var iv = itemView(it);
-    return '<div class="backlog-item" draggable="true" data-id="' + esc(iv.id) + '" data-action="edit" title="' + esc(iv.title) + '" style="display:flex; align-items:center; gap:9px; padding:8px 9px; border-radius:9px; cursor:grab; background:#fff; border:1px solid #EEEFF2; margin:4px 0; box-shadow:0 1px 1.5px rgba(16,24,40,.04);">'
+    return '<div class="backlog-item" draggable="true" data-id="' + esc(iv.id) + '" data-action="edit" title="' + esc(iv.title) + '" style="display:flex; align-items:center; gap:9px; padding:8px 9px; border-radius:9px; cursor:grab; background:#fff; border:1px solid #DFE1E6; margin:4px 0; box-shadow:0 1px 1.5px rgba(16,24,40,.04);">'
          +   '<span style="flex:0 0 auto; width:9px; height:9px; border-radius:50%; background:' + iv.color + ';"></span>'
          +   '<span style="flex:1; min-width:0; font-size:13.5px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + esc(iv.title) + '</span>'
-         +   '<span style="flex:0 0 auto; font-size:11px; color:#A7ACB6; font-weight:500;">' + esc(iv.catName) + '</span>'
+         +   '<span style="flex:0 0 auto; font-size:11px; color:#747A85; font-weight:500;">' + esc(iv.catName) + '</span>'
          + '</div>';
   }
 
   // ----------------------------------------------------------------- render: list view
   function renderList() {
-    var html = '<div style="flex:1; height:100%; overflow:auto; background:#F4F5F7;">';
+    var html = '<div style="flex:1; height:100%; overflow:auto; background:#EBEDF0;">';
     html += '<div style="width:100%; max-width:900px; margin:0 auto; padding:60px 24px 64px;">';
     html += '<div style="display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:28px;">'
           +   '<div>'
           +     '<div style="font-size:26px; font-weight:700; letter-spacing:-0.02em;">Jouw vakanties</div>'
-          +     '<div style="font-size:14px; color:#9AA0AB; margin-top:3px;">Plan elke reis dag per dag</div>'
+          +     '<div style="font-size:14px; color:#6F757F; margin-top:3px;">Plan elke reis dag per dag</div>'
           +   '</div>'
           +   '<button class="dark-btn" data-action="open-new" style="flex:0 0 auto; border:none; background:#1B1E26; color:#fff; border-radius:11px; padding:11px 18px; font-size:14px; font-weight:600; cursor:pointer;">+ Nieuwe vakantie</button>'
           + '</div>';
@@ -371,28 +371,28 @@
         var planned = its.filter(function (it) { return it.month != null; }).length;
         var plans = its.filter(function (it) { return it.month == null; }).length;
         var days = dayCount(h);
-        html += '<div class="holiday-card" data-action="open-holiday" data-id="' + esc(h.id) + '" style="position:relative; background:#fff; border:1px solid #EAEBEF; border-radius:16px; padding:20px 20px 18px; cursor:pointer; box-shadow:0 1px 2px rgba(16,24,40,.04); transition:box-shadow .12s,transform .12s;">'
+        html += '<div class="holiday-card" data-action="open-holiday" data-id="' + esc(h.id) + '" style="position:relative; background:#fff; border:1px solid #DBDDE2; border-radius:16px; padding:20px 20px 18px; cursor:pointer; box-shadow:0 1px 2px rgba(16,24,40,.04); transition:box-shadow .12s,transform .12s;">'
               +   '<div style="height:6px; width:46px; border-radius:20px; background:' + ACCENTS[i % ACCENTS.length] + '; margin-bottom:14px;"></div>'
               +   '<div style="font-size:17px; font-weight:700; letter-spacing:-0.01em; padding-right:22px;">' + esc(h.name) + '</div>'
-              +   '<div style="font-size:13px; color:#6B7280; font-weight:500; margin-top:4px;">' + esc(fmtRange(h)) + '</div>'
+              +   '<div style="font-size:13px; color:#515763; font-weight:500; margin-top:4px;">' + esc(fmtRange(h)) + '</div>'
               +   '<div style="display:flex; align-items:center; gap:14px; margin-top:16px;">'
-              +     '<span style="font-size:12.5px; color:#9AA0AB; font-weight:600;">' + days + (days === 1 ? ' dag' : ' dagen') + '</span>'
-              +     '<span style="font-size:12.5px; color:#9AA0AB; font-weight:600;">' + planned + ' ingepland</span>'
-              +     '<span style="font-size:12.5px; color:#B7BCC5; font-weight:600;">' + plans + ' in activiteiten</span>'
+              +     '<span style="font-size:12.5px; color:#6F757F; font-weight:600;">' + days + (days === 1 ? ' dag' : ' dagen') + '</span>'
+              +     '<span style="font-size:12.5px; color:#6F757F; font-weight:600;">' + planned + ' ingepland</span>'
+              +     '<span style="font-size:12.5px; color:#858B96; font-weight:600;">' + plans + ' in activiteiten</span>'
               +   '</div>'
-              +   '<button class="card-del" data-action="delete-holiday" data-id="' + esc(h.id) + '" title="Vakantie verwijderen" style="position:absolute; top:12px; right:12px; width:24px; height:24px; border:none; background:none; color:#C9CDD5; font-size:16px; line-height:1; cursor:pointer; border-radius:6px;">×</button>'
+              +   '<button class="card-del" data-action="delete-holiday" data-id="' + esc(h.id) + '" title="Vakantie verwijderen" style="position:absolute; top:12px; right:12px; width:24px; height:24px; border:none; background:none; color:#A4AAB4; font-size:16px; line-height:1; cursor:pointer; border-radius:6px;">×</button>'
               + '</div>';
       });
-      html += '<div class="add-card" data-action="open-new" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; min-height:140px; background:#FBFBFC; border:1.5px dashed #D8DBE1; border-radius:16px; cursor:pointer; color:#9AA0AB;">'
+      html += '<div class="add-card" data-action="open-new" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; min-height:140px; background:#FBFBFC; border:1.5px dashed #C6C9D1; border-radius:16px; cursor:pointer; color:#6F757F;">'
             +   '<span style="font-size:26px; line-height:1; font-weight:300;">+</span>'
             +   '<span style="font-size:13px; font-weight:600;">Nieuwe vakantie</span>'
             + '</div>';
       html += '</div>';
     } else {
-      html += '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:70px 24px; background:#fff; border:1px solid #EAEBEF; border-radius:18px;">'
+      html += '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:70px 24px; background:#fff; border:1px solid #DBDDE2; border-radius:18px;">'
             +   '<div style="font-size:40px; margin-bottom:12px;">🧳</div>'
             +   '<div style="font-size:18px; font-weight:700;">Nog geen vakanties</div>'
-            +   '<div style="font-size:14px; color:#9AA0AB; margin-top:5px; max-width:340px;">Maak je eerste reis aan en sleep activiteiten naar elke dag.</div>'
+            +   '<div style="font-size:14px; color:#6F757F; margin-top:5px; max-width:340px;">Maak je eerste reis aan en sleep activiteiten naar elke dag.</div>'
             +   '<button class="dark-btn" data-action="open-new" style="margin-top:20px; border:none; background:#1B1E26; color:#fff; border-radius:11px; padding:11px 20px; font-size:14px; font-weight:600; cursor:pointer;">+ Nieuwe vakantie</button>'
             + '</div>';
     }
@@ -432,21 +432,21 @@
     var html = '';
 
     // ---------- sidebar ----------
-    html += '<aside style="width:312px; flex:0 0 312px; height:100%; background:#FFFFFF; border-right:1px solid #EAEBEF; display:flex; flex-direction:column;">';
-    html += '<div style="padding:16px 20px 15px; border-bottom:1px solid #F0F1F4;">'
-          +   '<button class="back-btn" data-action="back-to-list" style="border:none; background:none; color:#9AA0AB; font-size:12.5px; font-weight:600; cursor:pointer; padding:0; margin-bottom:9px;">← Alle vakanties</button>'
+    html += '<aside style="width:312px; flex:0 0 312px; height:100%; background:#FFFFFF; border-right:1px solid #DBDDE2; display:flex; flex-direction:column;">';
+    html += '<div style="padding:16px 20px 15px; border-bottom:1px solid #E5E6EA;">'
+          +   '<button class="back-btn" data-action="back-to-list" style="border:none; background:none; color:#6F757F; font-size:12.5px; font-weight:600; cursor:pointer; padding:0; margin-bottom:9px;">← Alle vakanties</button>'
           +   '<input type="text" data-field="holidayName" value="' + esc(holiday.name) + '" style="width:100%; border:none; background:none; padding:0; font-size:18px; font-weight:700; letter-spacing:-0.01em; color:#1B1E26;" />'
-          +   '<div style="font-size:12.5px; color:#9AA0AB; margin-top:2px;">' + esc(fmtRange(holiday)) + '</div>'
+          +   '<div style="font-size:12.5px; color:#6F757F; margin-top:2px;">' + esc(fmtRange(holiday)) + '</div>'
           + '</div>';
 
     html += '<div style="flex:1; min-height:0; overflow-y:auto; padding:16px 16px 24px;">';
 
     // quick add
     html += '<div style="margin-bottom:20px;">'
-          +   '<div style="font-size:11px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:#9AA0AB; margin-bottom:9px;">Een activiteit toevoegen</div>'
-          +   '<input type="text" data-field="addTitle" value="' + esc(state.addTitle) + '" placeholder="Nieuwe activiteit…" style="width:100%; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:10px; padding:9px 11px; font-size:13.5px; color:#1B1E26; margin-bottom:7px;" />'
+          +   '<div style="font-size:11px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:#6F757F; margin-bottom:9px;">Een activiteit toevoegen</div>'
+          +   '<input type="text" data-field="addTitle" value="' + esc(state.addTitle) + '" placeholder="Nieuwe activiteit…" style="width:100%; border:1px solid #D4D7DD; background:#FBFBFC; border-radius:10px; padding:9px 11px; font-size:13.5px; color:#1B1E26; margin-bottom:7px;" />'
           +   '<div style="display:flex; gap:7px;">'
-          +     '<select data-field="addCategory" style="flex:1; min-width:0; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:10px; padding:8px 9px; font-size:12.5px; color:#4B5160;">' + optionsHtml(categoryOptions, state.addCategoryId) + '</select>'
+          +     '<select data-field="addCategory" style="flex:1; min-width:0; border:1px solid #D4D7DD; background:#FBFBFC; border-radius:10px; padding:8px 9px; font-size:12.5px; color:#373D49;">' + optionsHtml(categoryOptions, state.addCategoryId) + '</select>'
           +     '<button class="dark-btn" data-action="add" style="flex:0 0 auto; border:none; background:#1B1E26; color:#fff; border-radius:10px; padding:0 15px; font-size:13px; font-weight:600; cursor:pointer;">Toevoegen</button>'
           +   '</div>'
           + '</div>';
@@ -454,38 +454,38 @@
     // plans / backlog
     html += '<div style="margin-bottom:22px;">'
           +   '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:9px;">'
-          +     '<div style="font-size:11px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:#9AA0AB;">Activiteiten</div>'
-          +     '<div style="font-size:11.5px; font-weight:600; color:#9AA0AB; background:#F3F4F6; border-radius:20px; padding:2px 8px;">' + backlogItems.length + '</div>'
+          +     '<div style="font-size:11px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:#6F757F;">Activiteiten</div>'
+          +     '<div style="font-size:11.5px; font-weight:600; color:#6F757F; background:#F3F4F6; border-radius:20px; padding:2px 8px;">' + backlogItems.length + '</div>'
           +   '</div>'
-          +   '<div class="backlog-drop" data-drop="backlog" style="border-radius:12px; padding:6px; min-height:64px; transition:background .12s,box-shadow .12s; background:#FAFAFB; box-shadow:inset 0 0 0 1px #F0F1F4;">';
+          +   '<div class="backlog-drop" data-drop="backlog" style="border-radius:12px; padding:6px; min-height:64px; transition:background .12s,box-shadow .12s; background:#FAFAFB; box-shadow:inset 0 0 0 1px #E5E6EA;">';
     backlogItems.forEach(function (it) { html += backlogItem(it); });
     if (backlogItems.length === 0) {
-      html += '<div style="text-align:center; color:#B7BCC5; font-size:12.5px; padding:18px 8px;">Nog geen activiteiten — voeg hierboven ideeën toe</div>';
+      html += '<div style="text-align:center; color:#858B96; font-size:12.5px; padding:18px 8px;">Nog geen activiteiten — voeg hierboven ideeën toe</div>';
     }
     html += '</div></div>';
 
     // filters
     html += '<div style="margin-bottom:22px;">'
           +   '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:11px;">'
-          +     '<div style="font-size:11px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:#9AA0AB;">Categorieën</div>'
-          +     '<button class="reset-btn" data-action="reset" style="border:none; background:none; color:#A7ACB6; font-size:11.5px; font-weight:600; cursor:pointer; padding:0;">Herstellen</button>'
+          +     '<div style="font-size:11px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:#6F757F;">Categorieën</div>'
+          +     '<button class="reset-btn" data-action="reset" style="border:none; background:none; color:#747A85; font-size:11.5px; font-weight:600; cursor:pointer; padding:0;">Herstellen</button>'
           +   '</div>';
     state.categories.forEach(function (c) {
       var on = state.pv[c.id] !== false;
       var color = catColor(c.id);
       html += '<div class="cat-row" data-action="toggle" data-id="' + esc(c.id) + '" style="display:flex; align-items:center; gap:10px; cursor:pointer; padding:6px 3px; border-radius:8px; user-select:none;">'
-            +   '<span style="flex:0 0 auto; width:15px; height:15px; border-radius:4px; display:flex; align-items:center; justify-content:center; background:' + (on ? color : '#fff') + '; border:1.5px solid ' + (on ? color : '#C9CDD5') + ';">'
+            +   '<span style="flex:0 0 auto; width:15px; height:15px; border-radius:4px; display:flex; align-items:center; justify-content:center; background:' + (on ? color : '#fff') + '; border:1.5px solid ' + (on ? color : '#A4AAB4') + ';">'
             +     '<span style="color:#fff; font-size:10px; font-weight:800; line-height:1;">' + (on ? '✓' : '') + '</span>'
             +   '</span>'
-            +   '<span style="flex:1; font-size:13.5px; font-weight:600; color:' + (on ? '#2A2E38' : '#B7BCC5') + ';">' + esc(c.name) + '</span>'
-            +   '<span style="font-size:11px; color:#B7BCC5; font-weight:600;">' + (catCount[c.id] || 0) + '</span>'
+            +   '<span style="flex:1; font-size:13.5px; font-weight:600; color:' + (on ? '#1F232C' : '#858B96') + ';">' + esc(c.name) + '</span>'
+            +   '<span style="font-size:11px; color:#858B96; font-weight:600;">' + (catCount[c.id] || 0) + '</span>'
             + '</div>';
     });
     if (!state.newCatOpen) {
-      html += '<button class="newcat-btn" data-action="toggle-newcat" style="width:100%; margin-top:8px; border:1.5px dashed #D8DBE1; background:none; color:#9AA0AB; border-radius:9px; padding:8px 0; font-size:12.5px; font-weight:600; cursor:pointer;">+ Categorie toevoegen</button>';
+      html += '<button class="newcat-btn" data-action="toggle-newcat" style="width:100%; margin-top:8px; border:1.5px dashed #C6C9D1; background:none; color:#6F757F; border-radius:9px; padding:8px 0; font-size:12.5px; font-weight:600; cursor:pointer;">+ Categorie toevoegen</button>';
     } else {
-      html += '<div style="margin-top:9px; padding:11px; background:#FAFAFB; border:1px solid #EFF0F3; border-radius:11px;">'
-            +   '<input type="text" data-field="newCatName" value="' + esc(state.newCatName) + '" placeholder="Naam categorie…" style="width:100%; border:1px solid #E4E6EB; background:#fff; border-radius:9px; padding:8px 10px; font-size:13px; color:#1B1E26; margin-bottom:10px;" />'
+      html += '<div style="margin-top:9px; padding:11px; background:#FAFAFB; border:1px solid #E4E5E9; border-radius:11px;">'
+            +   '<input type="text" data-field="newCatName" value="' + esc(state.newCatName) + '" placeholder="Naam categorie…" style="width:100%; border:1px solid #D4D7DD; background:#fff; border-radius:9px; padding:8px 10px; font-size:13px; color:#1B1E26; margin-bottom:10px;" />'
             +   '<div style="display:flex; align-items:center; gap:8px; margin-bottom:11px;">';
       CAT_COLORS.forEach(function (col) {
         var ring = col === state.newCatColor ? '#1B1E26' : 'transparent';
@@ -494,7 +494,7 @@
       html += '</div>'
             +   '<div style="display:flex; gap:7px;">'
             +     '<button class="dark-btn" data-action="add-category" style="flex:1; border:none; background:#1B1E26; color:#fff; border-radius:9px; padding:8px 0; font-size:12.5px; font-weight:600; cursor:pointer;">Toevoegen</button>'
-            +     '<button class="secondary-btn" data-action="toggle-newcat" style="flex:0 0 auto; border:1px solid #E4E6EB; background:#fff; color:#6B7280; border-radius:9px; padding:8px 12px; font-size:12.5px; font-weight:600; cursor:pointer;">Annuleren</button>'
+            +     '<button class="secondary-btn" data-action="toggle-newcat" style="flex:0 0 auto; border:1px solid #D4D7DD; background:#fff; color:#515763; border-radius:9px; padding:8px 12px; font-size:12.5px; font-weight:600; cursor:pointer;">Annuleren</button>'
             +   '</div>'
             + '</div>';
     }
@@ -508,21 +508,21 @@
       }).filter(function (x) { return x.count > 0; });
       html += '<div>'
             +   '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">'
-            +     '<div style="font-size:11px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:#9AA0AB;">Verdeling</div>'
-            +     '<div style="font-size:11px; color:#B7BCC5; font-weight:500;">' + (total ? (total + ' ingepland') : '') + '</div>'
+            +     '<div style="font-size:11px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:#6F757F;">Verdeling</div>'
+            +     '<div style="font-size:11px; color:#858B96; font-weight:500;">' + (total ? (total + ' ingepland') : '') + '</div>'
             +   '</div>'
-            +   '<div style="display:flex; height:10px; border-radius:20px; overflow:hidden; background:#F0F1F4;">';
+            +   '<div style="display:flex; height:10px; border-radius:20px; overflow:hidden; background:#E5E6EA;">';
       segs.forEach(function (seg) { html += '<div style="height:100%; width:' + seg.pct + '%; background:' + seg.color + ';"></div>'; });
       html += '</div><div style="display:flex; flex-direction:column; gap:6px; margin-top:11px;">';
       segs.forEach(function (seg) {
         html += '<div style="display:flex; align-items:center; gap:8px;">'
               +   '<span style="width:8px; height:8px; border-radius:50%; background:' + seg.color + ';"></span>'
-              +   '<span style="flex:1; font-size:12.5px; color:#5A606C; font-weight:500;">' + esc(seg.name) + '</span>'
-              +   '<span style="font-size:12px; color:#9AA0AB; font-weight:600;">' + esc(seg.label) + '</span>'
+              +   '<span style="flex:1; font-size:12.5px; color:#434953; font-weight:500;">' + esc(seg.name) + '</span>'
+              +   '<span style="font-size:12px; color:#6F757F; font-weight:600;">' + esc(seg.label) + '</span>'
               + '</div>';
       });
       html += '</div>';
-      if (segs.length === 0) html += '<div style="font-size:12.5px; color:#B7BCC5; margin-top:8px;">Nog niets ingepland.</div>';
+      if (segs.length === 0) html += '<div style="font-size:12.5px; color:#858B96; margin-top:8px;">Nog niets ingepland.</div>';
       html += '</div>';
     }
 
@@ -535,28 +535,28 @@
     var navBtn = function (action, label, disabled) {
       return '<button class="secondary-btn" data-action="' + action + '"' + (disabled ? ' disabled' : '')
            +   ' title="' + (action === 'week-prev' ? 'Vorige week' : 'Volgende week') + '"'
-           +   ' style="display:flex; align-items:center; justify-content:center; width:30px; height:30px; border:1px solid #E4E6EB; background:#fff; color:' + (disabled ? '#C9CDD5' : '#5A606C') + '; border-radius:8px; font-size:16px; line-height:1; cursor:' + (disabled ? 'default' : 'pointer') + ';">' + label + '</button>';
+           +   ' style="display:flex; align-items:center; justify-content:center; width:30px; height:30px; border:1px solid #D4D7DD; background:#fff; color:' + (disabled ? '#A4AAB4' : '#434953') + '; border-radius:8px; font-size:16px; line-height:1; cursor:' + (disabled ? 'default' : 'pointer') + ';">' + label + '</button>';
     };
     var weekNav = pageCount > 1
       ? '<div style="display:flex; align-items:center; gap:8px;">'
         + navBtn('week-prev', '‹', page === 0)
-        + '<span style="font-size:12.5px; font-weight:600; color:#6B7280; min-width:96px; text-align:center;">' + esc(pageRangeLabel(pageDays)) + '</span>'
+        + '<span style="font-size:12.5px; font-weight:600; color:#515763; min-width:96px; text-align:center;">' + esc(pageRangeLabel(pageDays)) + '</span>'
         + navBtn('week-next', '›', page >= pageCount - 1)
         + '</div>'
-      : '<div style="font-size:12.5px; color:#9AA0AB;">Sleep een activiteit naar een tijdsblok</div>';
-    html += '<div style="flex:0 0 auto; min-height:58px; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:10px 24px; border-bottom:1px solid #EAEBEF; background:#FAFAFB;">'
+      : '<div style="font-size:12.5px; color:#6F757F;">Sleep een activiteit naar een tijdsblok</div>';
+    html += '<div style="flex:0 0 auto; min-height:58px; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:10px 24px; border-bottom:1px solid #DBDDE2; background:#FAFAFB;">'
           +   '<div style="display:flex; align-items:center; gap:11px;">'
           +     '<div style="font-size:15px; font-weight:700; letter-spacing:-0.01em;">Reisschema</div>'
-          +     '<div style="display:flex; align-items:center; gap:7px; background:#fff; border:1px solid #E4E6EB; border-radius:10px; padding:5px 9px;">'
-          +       '<span style="font-size:11px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:#9AA0AB;">Data</span>'
-          +       '<input type="date" data-field="holidayStart" value="' + esc(holiday.start) + '" style="border:none; background:none; font-size:13px; font-weight:600; color:#2A2E38; padding:0;" />'
-          +       '<span style="color:#C9CDD5;">→</span>'
-          +       '<input type="date" data-field="holidayEnd" value="' + esc(holiday.end) + '" style="border:none; background:none; font-size:13px; font-weight:600; color:#2A2E38; padding:0;" />'
+          +     '<div style="display:flex; align-items:center; gap:7px; background:#fff; border:1px solid #D4D7DD; border-radius:10px; padding:5px 9px;">'
+          +       '<span style="font-size:11px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:#6F757F;">Data</span>'
+          +       '<input type="date" data-field="holidayStart" value="' + esc(holiday.start) + '" style="border:none; background:none; font-size:13px; font-weight:600; color:#1F232C; padding:0;" />'
+          +       '<span style="color:#A4AAB4;">→</span>'
+          +       '<input type="date" data-field="holidayEnd" value="' + esc(holiday.end) + '" style="border:none; background:none; font-size:13px; font-weight:600; color:#1F232C; padding:0;" />'
           +     '</div>'
           +   '</div>'
           +   '<div style="display:flex; align-items:center; gap:14px;">'
           +     weekNav
-          +     '<div style="font-size:12.5px; color:#6B7280; font-weight:600;">' + sched.length + ' ingepland</div>'
+          +     '<div style="font-size:12.5px; color:#515763; font-weight:600;">' + sched.length + ' ingepland</div>'
           +   '</div>'
           + '</div>';
 
@@ -566,13 +566,13 @@
 
     // header row: one column per day in the current page
     html += '<div style="display:flex; position:sticky; top:0; z-index:5;">';
-    html += '<div style="flex:0 0 116px; width:116px; position:sticky; left:0; z-index:6; background:#FAFAFB; border-right:1px solid #C7CBD3; border-bottom:1.5px solid #C7CBD3;"></div>';
+    html += '<div style="flex:0 0 116px; width:116px; position:sticky; left:0; z-index:6; background:#FAFAFB; border-right:1px solid #B3B8C2; border-bottom:1.5px solid #B3B8C2;"></div>';
     pageDays.forEach(function (day) {
       var isToday = (day.y + '-' + day.m + '-' + day.d) === todayKey;
-      var headBg = day.weekend ? '#FBF4E7' : '#FAFAFB';
-      html += '<div style="flex:1 1 0; min-width:104px; padding:9px 10px; text-align:center; background:' + headBg + '; border-right:1px solid #D3D7DE; border-bottom:1.5px solid #C7CBD3; display:flex; flex-direction:column; align-items:center; gap:3px;">'
-            +   '<span style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:' + (day.weekend ? '#B26A1F' : '#7E8490') + ';">' + WD[day.wd] + '</span>'
-            +   '<span style="font-size:14px; font-weight:700; line-height:1.2; ' + (isToday ? 'color:#fff; background:#E5484D; border-radius:20px; padding:2px 9px;' : 'color:#2A2E38;') + '">' + MONTHS_SHORT[day.m] + ' ' + day.d + '</span>'
+      var headBg = day.weekend ? '#F8EDD6' : '#FAFAFB';
+      html += '<div style="flex:1 1 0; min-width:104px; padding:9px 10px; text-align:center; background:' + headBg + '; border-right:1px solid #BFC3CC; border-bottom:1.5px solid #B3B8C2; display:flex; flex-direction:column; align-items:center; gap:3px;">'
+            +   '<span style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:' + (day.weekend ? '#985810' : '#565C67') + ';">' + WD[day.wd] + '</span>'
+            +   '<span style="font-size:14px; font-weight:700; line-height:1.2; ' + (isToday ? 'color:#fff; background:#E5484D; border-radius:20px; padding:2px 9px;' : 'color:#1F232C;') + '">' + MONTHS_SHORT[day.m] + ' ' + day.d + '</span>'
             + '</div>';
     });
     html += '</div>';
@@ -580,16 +580,16 @@
     // one row per time-of-day segment (all-day first)
     GRID_ROWS.forEach(function (slot, ri) {
       var isAll = slot.id === 'allday';
-      var rowBorder = isAll ? '2px solid #C7CBD3' : '1px solid #D3D7DE';
+      var rowBorder = isAll ? '2px solid #B3B8C2' : '1px solid #BFC3CC';
       html += '<div style="display:flex; flex:' + (isAll ? '0 0 auto' : '1 1 0') + ';">';
-      html += '<div style="flex:0 0 116px; width:116px; position:sticky; left:0; z-index:2; background:' + (isAll ? '#F2F1F8' : '#FAFAFB') + '; border-right:1px solid #C7CBD3; border-bottom:' + rowBorder + '; display:flex; align-items:center; gap:8px; padding:10px 12px;">'
+      html += '<div style="flex:0 0 116px; width:116px; position:sticky; left:0; z-index:2; background:' + (isAll ? '#F2F1F8' : '#FAFAFB') + '; border-right:1px solid #B3B8C2; border-bottom:' + rowBorder + '; display:flex; align-items:center; gap:8px; padding:10px 12px;">'
             +   '<span style="font-size:15px; line-height:1;">' + slot.icon + '</span>'
-            +   '<span style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:#7E8490;">' + slot.name + '</span>'
+            +   '<span style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:#565C67;">' + slot.name + '</span>'
             + '</div>';
       pageDays.forEach(function (day) {
         var its = (byCell[day.m + '-' + day.d + '-' + slot.id] || []);
-        var cellBg = isAll ? (day.weekend ? '#FAF6EF' : '#FBFAFE') : (day.weekend ? '#FBF7EF' : '#FFFFFF');
-        html += '<div class="cell" data-drop="cell" data-m="' + day.m + '" data-d="' + day.d + '" data-seg="' + slot.id + '" style="flex:1 1 0; min-width:104px; min-height:' + (isAll ? '56px' : '104px') + '; border-right:1px solid ' + (day.weekend ? '#E8DEC9' : '#D3D7DE') + '; border-bottom:' + rowBorder + '; background:' + cellBg + '; padding:5px; display:flex; flex-direction:column; gap:5px;">';
+        var cellBg = isAll ? (day.weekend ? '#F6EEDC' : '#FBFAFE') : (day.weekend ? '#F7EEDC' : '#FFFFFF');
+        html += '<div class="cell" data-drop="cell" data-m="' + day.m + '" data-d="' + day.d + '" data-seg="' + slot.id + '" style="flex:1 1 0; min-width:104px; min-height:' + (isAll ? '56px' : '104px') + '; border-right:1px solid ' + (day.weekend ? '#E0D2B4' : '#BFC3CC') + '; border-bottom:' + rowBorder + '; background:' + cellBg + '; padding:5px; display:flex; flex-direction:column; gap:5px;">';
         its.forEach(function (it) {
           var iv = itemView(it);
           html += '<div class="chip" draggable="true" data-id="' + esc(iv.id) + '" data-action="edit" title="' + esc(iv.title) + '" style="background:' + iv.chipBg + '; border-left:3px solid ' + iv.color + '; border-radius:7px; padding:7px 9px 8px 10px; cursor:grab; display:flex; flex-direction:column; gap:3px;">'
@@ -618,14 +618,14 @@
     var vis = state.items.filter(function (it) { return it.holidayId === holiday.id && state.pv[it.categoryId] !== false; });
     var sched = vis.filter(function (it) { return it.month != null; });
 
-    var html = '<main style="flex:1; min-width:0; width:100%; height:100%; display:flex; flex-direction:column; background:#F4F5F7;">';
+    var html = '<main style="flex:1; min-width:0; width:100%; height:100%; display:flex; flex-direction:column; background:#EBEDF0;">';
 
     if (!days.length) {
-      html += '<div style="padding:18px 16px; border-bottom:1px solid #EAEBEF; background:#fff;">'
-            +   '<button class="back-btn" data-action="back-to-list" style="border:none; background:none; color:#9AA0AB; font-size:13px; font-weight:600; cursor:pointer; padding:0;">← Alle vakanties</button>'
+      html += '<div style="padding:18px 16px; border-bottom:1px solid #DBDDE2; background:#fff;">'
+            +   '<button class="back-btn" data-action="back-to-list" style="border:none; background:none; color:#6F757F; font-size:13px; font-weight:600; cursor:pointer; padding:0;">← Alle vakanties</button>'
             +   '<div style="font-size:19px; font-weight:700; margin-top:8px;">' + esc(holiday.name) + '</div>'
             + '</div>'
-            + '<div style="padding:40px 24px; text-align:center; color:#9AA0AB; font-size:14px;">Stel geldige reisdata in om je dagen te plannen.</div>'
+            + '<div style="padding:40px 24px; text-align:center; color:#6F757F; font-size:14px;">Stel geldige reisdata in om je dagen te plannen.</div>'
             + '</main>';
       return html;
     }
@@ -643,19 +643,19 @@
     var dayCountScheduled = sched.filter(function (it) { return it.month === day.m && it.day === day.d; }).length;
 
     // header
-    html += '<div style="flex:0 0 auto; background:#fff; border-bottom:1px solid #EAEBEF; padding:14px 16px 0;">'
-          +   '<button class="back-btn" data-action="back-to-list" style="border:none; background:none; color:#9AA0AB; font-size:13px; font-weight:600; cursor:pointer; padding:0;">← Alle vakanties</button>'
+    html += '<div style="flex:0 0 auto; background:#fff; border-bottom:1px solid #DBDDE2; padding:14px 16px 0;">'
+          +   '<button class="back-btn" data-action="back-to-list" style="border:none; background:none; color:#6F757F; font-size:13px; font-weight:600; cursor:pointer; padding:0;">← Alle vakanties</button>'
           +   '<div style="font-size:19px; font-weight:700; letter-spacing:-0.01em; margin-top:7px;">' + esc(holiday.name) + '</div>'
-          +   '<div style="font-size:12.5px; color:#9AA0AB; margin-top:1px;">' + esc(fmtRange(holiday)) + '</div>'
+          +   '<div style="font-size:12.5px; color:#6F757F; margin-top:1px;">' + esc(fmtRange(holiday)) + '</div>'
           // day nav bar
           +   '<div style="display:flex; align-items:center; gap:10px; margin-top:13px; padding-bottom:12px;">'
           +     navBtnMobile('day-prev', '‹', idx === 0)
           +     '<div style="flex:1; text-align:center;">'
           +       '<div style="display:inline-flex; align-items:center; gap:8px;">'
-          +         '<span style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:' + (day.weekend ? '#B26A1F' : '#9AA0AB') + ';">' + WD[day.wd] + '</span>'
+          +         '<span style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:' + (day.weekend ? '#985810' : '#6F757F') + ';">' + WD[day.wd] + '</span>'
           +         '<span style="font-size:16px; font-weight:700; ' + (isToday ? 'color:#fff; background:#E5484D; border-radius:20px; padding:2px 11px;' : 'color:#1B1E26;') + '">' + MONTHS_SHORT[day.m] + ' ' + day.d + '</span>'
           +       '</div>'
-          +       '<div style="font-size:11px; color:#B7BCC5; font-weight:600; margin-top:2px;">Dag ' + (idx + 1) + ' / ' + days.length + ' · ' + dayCountScheduled + ' gepland</div>'
+          +       '<div style="font-size:11px; color:#858B96; font-weight:600; margin-top:2px;">Dag ' + (idx + 1) + ' / ' + days.length + ' · ' + dayCountScheduled + ' gepland</div>'
           +     '</div>'
           +     navBtnMobile('day-next', '›', idx >= days.length - 1)
           +   '</div>'
@@ -668,18 +668,18 @@
       html += '<div style="margin-top:10px;">'
             +   '<div style="display:flex; align-items:center; gap:8px; padding:4px 4px 7px;">'
             +     '<span style="font-size:14px; line-height:1;">' + slot.icon + '</span>'
-            +     '<span style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#7E8490;">' + slot.name + '</span>'
-            +     (its.length ? '<span style="font-size:11px; color:#B7BCC5; font-weight:600;">' + its.length + '</span>' : '')
+            +     '<span style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#565C67;">' + slot.name + '</span>'
+            +     (its.length ? '<span style="font-size:11px; color:#858B96; font-weight:600;">' + its.length + '</span>' : '')
             +   '</div>';
       if (!its.length) {
-        html += '<div style="border:1px dashed #E2E4E9; border-radius:11px; padding:11px 13px; font-size:12.5px; color:#C2C6CF; background:#FBFBFC;">Niets gepland</div>';
+        html += '<div style="border:1px dashed #D2D5DB; border-radius:11px; padding:11px 13px; font-size:12.5px; color:#9198A3; background:#FBFBFC;">Niets gepland</div>';
       } else {
         its.forEach(function (it) {
           var iv = itemView(it);
           html += '<div class="chip" data-id="' + esc(iv.id) + '" data-action="edit" title="' + esc(iv.title) + '" style="background:' + iv.chipBg + '; border-left:4px solid ' + iv.color + '; border-radius:11px; padding:11px 13px; margin-bottom:8px; cursor:pointer; display:flex; flex-direction:column; gap:4px;">'
                 +   (it.time ? '<span style="font-size:11px; font-weight:800; letter-spacing:0.02em; color:' + iv.color + ';">' + esc(it.time) + '</span>' : '')
                 +   '<span style="font-size:15px; font-weight:600; line-height:1.3; color:' + iv.chipText + ';">' + esc(iv.title) + '</span>'
-                +   (it.address ? '<span style="font-size:12px; color:#8A909C; line-height:1.3;">' + esc(it.address) + '</span>' : '')
+                +   (it.address ? '<span style="font-size:12px; color:#636974; line-height:1.3;">' + esc(it.address) + '</span>' : '')
                 +   '<span style="font-size:10px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; color:' + iv.color + ';">' + esc(iv.catName) + '</span>'
                 + '</div>';
         });
@@ -692,7 +692,7 @@
 
   function navBtnMobile(action, label, disabled) {
     return '<button class="secondary-btn" data-action="' + action + '"' + (disabled ? ' disabled' : '')
-         +   ' style="flex:0 0 auto; display:flex; align-items:center; justify-content:center; width:42px; height:42px; border:1px solid #E4E6EB; background:#fff; color:' + (disabled ? '#D3D7DE' : '#3A3F4B') + '; border-radius:11px; font-size:20px; line-height:1; cursor:' + (disabled ? 'default' : 'pointer') + ';">' + label + '</button>';
+         +   ' style="flex:0 0 auto; display:flex; align-items:center; justify-content:center; width:42px; height:42px; border:1px solid #D4D7DD; background:#fff; color:' + (disabled ? '#BFC3CC' : '#3A3F4B') + '; border-radius:11px; font-size:20px; line-height:1; cursor:' + (disabled ? 'default' : 'pointer') + ';">' + label + '</button>';
   }
 
   // ----------------------------------------------------------------- render: modals
@@ -701,21 +701,21 @@
          +   '<div data-modal-card style="width:420px; max-width:92vw; background:#fff; border-radius:18px; box-shadow:0 24px 64px rgba(16,24,40,.28); overflow:hidden;">'
          +     '<div style="padding:20px 22px 6px;">'
          +       '<div style="font-size:17px; font-weight:700; letter-spacing:-0.01em;">Nieuwe vakantie</div>'
-         +       '<div style="font-size:13px; color:#9AA0AB; margin-top:2px;">Geef je reis een naam en kies de data.</div>'
+         +       '<div style="font-size:13px; color:#6F757F; margin-top:2px;">Geef je reis een naam en kies de data.</div>'
          +     '</div>'
          +     '<div style="padding:14px 22px 18px;">'
-         +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB; margin-bottom:7px;">Naam van de vakantie</label>'
-         +       '<input type="text" data-field="newName" value="' + esc(state.newName) + '" placeholder="bv. Week aan zee" style="width:100%; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:15px; font-weight:600; color:#1B1E26; margin-bottom:16px;" />'
+         +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#6F757F; margin-bottom:7px;">Naam van de vakantie</label>'
+         +       '<input type="text" data-field="newName" value="' + esc(state.newName) + '" placeholder="bv. Week aan zee" style="width:100%; border:1px solid #D4D7DD; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:15px; font-weight:600; color:#1B1E26; margin-bottom:16px;" />'
          +       '<div style="display:flex; gap:12px;">'
-         +         '<div style="flex:1;"><label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB; margin-bottom:7px;">Van</label>'
-         +           '<input type="date" data-field="newStart" value="' + esc(state.newStart) + '" style="width:100%; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:10px 12px; font-size:14px; color:#1B1E26;" /></div>'
-         +         '<div style="flex:1;"><label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB; margin-bottom:7px;">Tot</label>'
-         +           '<input type="date" data-field="newEnd" value="' + esc(state.newEnd) + '" style="width:100%; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:10px 12px; font-size:14px; color:#1B1E26;" /></div>'
+         +         '<div style="flex:1;"><label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#6F757F; margin-bottom:7px;">Van</label>'
+         +           '<input type="date" data-field="newStart" value="' + esc(state.newStart) + '" style="width:100%; border:1px solid #D4D7DD; background:#FBFBFC; border-radius:11px; padding:10px 12px; font-size:14px; color:#1B1E26;" /></div>'
+         +         '<div style="flex:1;"><label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#6F757F; margin-bottom:7px;">Tot</label>'
+         +           '<input type="date" data-field="newEnd" value="' + esc(state.newEnd) + '" style="width:100%; border:1px solid #D4D7DD; background:#FBFBFC; border-radius:11px; padding:10px 12px; font-size:14px; color:#1B1E26;" /></div>'
          +       '</div>'
          +     '</div>'
-         +     '<div style="display:flex; align-items:center; gap:9px; padding:14px 22px; border-top:1px solid #F0F1F4; background:#FAFAFB;">'
+         +     '<div style="display:flex; align-items:center; gap:9px; padding:14px 22px; border-top:1px solid #E5E6EA; background:#FAFAFB;">'
          +       '<span style="flex:1;"></span>'
-         +       '<button class="secondary-btn" data-action="close-new" style="border:1px solid #E4E6EB; background:#fff; color:#5A606C; font-size:13px; font-weight:600; cursor:pointer; padding:9px 16px; border-radius:9px;">Annuleren</button>'
+         +       '<button class="secondary-btn" data-action="close-new" style="border:1px solid #D4D7DD; background:#fff; color:#434953; font-size:13px; font-weight:600; cursor:pointer; padding:9px 16px; border-radius:9px;">Annuleren</button>'
          +       '<button class="dark-btn" data-action="create-holiday" style="border:none; background:#1B1E26; color:#fff; font-size:13px; font-weight:600; cursor:pointer; padding:9px 20px; border-radius:9px;">Vakantie aanmaken</button>'
          +     '</div>'
          +   '</div>'
@@ -736,44 +736,44 @@
 
     return '<div style="position:fixed; inset:0; background:rgba(20,24,33,.32); display:flex; align-items:center; justify-content:center; z-index:50; backdrop-filter:blur(1.5px);">'
          +   '<div data-modal-card style="width:440px; max-width:92vw; max-height:90vh; overflow:auto; background:#fff; border-radius:18px; box-shadow:0 24px 64px rgba(16,24,40,.28);">'
-         +     '<div style="padding:20px 22px 16px; display:flex; align-items:center; gap:11px; border-bottom:1px solid #F0F1F4;">'
+         +     '<div style="padding:20px 22px 16px; display:flex; align-items:center; gap:11px; border-bottom:1px solid #E5E6EA;">'
          +       '<span style="width:12px; height:12px; border-radius:50%; background:' + color + ';"></span>'
-         +       '<div style="flex:1; font-size:12px; font-weight:600; color:#9AA0AB;">' + esc(c ? c.name : '') + '</div>'
-         +       (scheduled ? '<div style="font-size:12px; font-weight:600; color:#9AA0AB; background:#F3F4F6; border-radius:20px; padding:3px 10px;">' + esc(placement) + '</div>' : '')
-         +       '<button class="card-del" data-action="close-editor" title="Sluiten" style="border:none; background:none; color:#C9CDD5; font-size:20px; line-height:1; cursor:pointer; padding:2px 5px; border-radius:6px; margin:-2px -4px -2px 0;">×</button>'
+         +       '<div style="flex:1; font-size:12px; font-weight:600; color:#6F757F;">' + esc(c ? c.name : '') + '</div>'
+         +       (scheduled ? '<div style="font-size:12px; font-weight:600; color:#6F757F; background:#F3F4F6; border-radius:20px; padding:3px 10px;">' + esc(placement) + '</div>' : '')
+         +       '<button class="card-del" data-action="close-editor" title="Sluiten" style="border:none; background:none; color:#A4AAB4; font-size:20px; line-height:1; cursor:pointer; padding:2px 5px; border-radius:6px; margin:-2px -4px -2px 0;">×</button>'
          +     '</div>'
          +     '<div style="padding:18px 22px 22px;">'
-         +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB; margin-bottom:7px;">Titel</label>'
-         +       '<input type="text" data-field="editTitle" value="' + esc(it.title) + '" style="width:100%; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:15px; font-weight:600; color:#1B1E26; margin-bottom:16px;" />'
-         +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB; margin-bottom:7px;">Categorie</label>'
-         +       '<select data-field="editCategory" style="width:100%; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:14px; color:#1B1E26; margin-bottom:16px;">' + optionsHtml(categoryOptions, it.categoryId) + '</select>'
-         +       (scheduled ? '<label style="display:flex; align-items:center; gap:10px; margin-bottom:16px; padding:11px 13px; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; cursor:pointer; user-select:none;">'
+         +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#6F757F; margin-bottom:7px;">Titel</label>'
+         +       '<input type="text" data-field="editTitle" value="' + esc(it.title) + '" style="width:100%; border:1px solid #D4D7DD; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:15px; font-weight:600; color:#1B1E26; margin-bottom:16px;" />'
+         +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#6F757F; margin-bottom:7px;">Categorie</label>'
+         +       '<select data-field="editCategory" style="width:100%; border:1px solid #D4D7DD; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:14px; color:#1B1E26; margin-bottom:16px;">' + optionsHtml(categoryOptions, it.categoryId) + '</select>'
+         +       (scheduled ? '<label style="display:flex; align-items:center; gap:10px; margin-bottom:16px; padding:11px 13px; border:1px solid #D4D7DD; background:#FBFBFC; border-radius:11px; cursor:pointer; user-select:none;">'
          +         '<input type="checkbox" data-field="editAllDay"' + (it.segment === 'allday' ? ' checked' : '') + ' style="width:16px; height:16px; cursor:pointer; accent-color:#1B1E26;" />'
          +         '<span style="flex:1; font-size:14px; font-weight:600; color:#1B1E26;">Hele dag</span>'
-         +         '<span style="font-size:11.5px; color:#9AA0AB;">Geen vast tijdsblok</span>'
+         +         '<span style="font-size:11.5px; color:#6F757F;">Geen vast tijdsblok</span>'
          +       '</label>' : '')
-         +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB; margin-bottom:7px;">Tijd <span style="font-weight:600; text-transform:none; letter-spacing:0; color:#B7BCC5;">(optioneel)</span></label>'
-         +       '<input type="time" data-field="editTime" lang="nl-NL" step="60" value="' + esc(it.time || '') + '" style="width:100%; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:14px; color:#1B1E26; margin-bottom:16px;" />'
-         +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB; margin-bottom:7px;">Adres</label>'
+         +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#6F757F; margin-bottom:7px;">Tijd <span style="font-weight:600; text-transform:none; letter-spacing:0; color:#858B96;">(optioneel)</span></label>'
+         +       '<input type="time" data-field="editTime" lang="nl-NL" step="60" value="' + esc(it.time || '') + '" style="width:100%; border:1px solid #D4D7DD; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:14px; color:#1B1E26; margin-bottom:16px;" />'
+         +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#6F757F; margin-bottom:7px;">Adres</label>'
          +       '<div style="position:relative; margin-bottom:16px;">'
-         +         '<input type="text" data-field="editAddress" autocomplete="off" value="' + esc(it.address) + '" placeholder="Plaats of adres voor de kaart…" style="width:100%; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:14px; color:#1B1E26;" />'
-         +         '<div data-addr-suggest style="position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:30; background:#fff; border:1px solid #E4E6EB; border-radius:11px; box-shadow:0 10px 28px rgba(16,24,40,.14); overflow:hidden; display:none;"></div>'
+         +         '<input type="text" data-field="editAddress" autocomplete="off" value="' + esc(it.address) + '" placeholder="Plaats of adres voor de kaart…" style="width:100%; border:1px solid #D4D7DD; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:14px; color:#1B1E26;" />'
+         +         '<div data-addr-suggest style="position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:30; background:#fff; border:1px solid #D4D7DD; border-radius:11px; box-shadow:0 10px 28px rgba(16,24,40,.14); overflow:hidden; display:none;"></div>'
          +       '</div>'
-         +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB; margin-bottom:7px;">Notitie</label>'
-         +       '<textarea data-field="editNote" placeholder="Voeg een korte notitie toe…" style="width:100%; min-height:74px; resize:vertical; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:13.5px; color:#4B5160; line-height:1.5; box-sizing:border-box; display:block; margin-bottom:16px;">' + esc(it.note) + '</textarea>'
-         +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB; margin-bottom:7px;">URL <span style="font-weight:600; text-transform:none; letter-spacing:0; color:#B7BCC5;">(optioneel)</span></label>'
-         +       '<input type="url" data-field="editUrl" value="' + esc(it.url || '') + '" placeholder="https://…" style="width:100%; border:1px solid #E4E6EB; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:14px; color:#1B1E26;" />'
+         +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#6F757F; margin-bottom:7px;">Notitie</label>'
+         +       '<textarea data-field="editNote" placeholder="Voeg een korte notitie toe…" style="width:100%; min-height:74px; resize:vertical; border:1px solid #D4D7DD; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:13.5px; color:#373D49; line-height:1.5; box-sizing:border-box; display:block; margin-bottom:16px;">' + esc(it.note) + '</textarea>'
+         +       '<label style="display:block; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#6F757F; margin-bottom:7px;">URL <span style="font-weight:600; text-transform:none; letter-spacing:0; color:#858B96;">(optioneel)</span></label>'
+         +       '<input type="url" data-field="editUrl" value="' + esc(it.url || '') + '" placeholder="https://…" style="width:100%; border:1px solid #D4D7DD; background:#FBFBFC; border-radius:11px; padding:11px 13px; font-size:14px; color:#1B1E26;" />'
          +       '<div style="display:flex; align-items:center; justify-content:space-between; margin:18px 0 7px;">'
-         +         '<label style="font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9AA0AB;">Kaart</label>'
-         +         '<a class="map-link" href="' + esc(mapLink) + '" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:4px; font-size:11.5px; font-weight:600; color:#2A6FDB; text-decoration:none;">Openen in Google Maps ↗</a>'
+         +         '<label style="font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#6F757F;">Kaart</label>'
+         +         '<a class="map-link" href="' + esc(mapLink) + '" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:4px; font-size:11.5px; font-weight:600; color:#2061C9; text-decoration:none;">Openen in Google Maps ↗</a>'
          +       '</div>'
-         +       '<div style="border:1px solid #E4E6EB; border-radius:11px; overflow:hidden; background:#F0F1F4;">'
+         +       '<div style="border:1px solid #D4D7DD; border-radius:11px; overflow:hidden; background:#E5E6EA;">'
          +         '<iframe src="' + esc(mapEmbed) + '" width="100%" height="158" style="border:0; display:block;" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>'
          +       '</div>'
          +     '</div>'
-         +     '<div style="display:flex; align-items:center; gap:9px; padding:14px 22px; border-top:1px solid #F0F1F4; background:#FAFAFB; position:sticky; bottom:0;">'
+         +     '<div style="display:flex; align-items:center; gap:9px; padding:14px 22px; border-top:1px solid #E5E6EA; background:#FAFAFB; position:sticky; bottom:0;">'
          +       '<button class="delete-btn" data-action="delete-item" style="border:none; background:none; color:#C0392B; font-size:13px; font-weight:600; cursor:pointer; padding:8px 4px;">Verwijderen</button>'
-         +       (scheduled ? '<button class="secondary-btn" data-action="unschedule" style="border:1px solid #E4E6EB; background:#fff; color:#5A606C; font-size:13px; font-weight:600; cursor:pointer; padding:8px 14px; border-radius:9px;">Naar activiteiten</button>' : '')
+         +       (scheduled ? '<button class="secondary-btn" data-action="unschedule" style="border:1px solid #D4D7DD; background:#fff; color:#434953; font-size:13px; font-weight:600; cursor:pointer; padding:8px 14px; border-radius:9px;">Naar activiteiten</button>' : '')
          +       '<span style="flex:1;"></span>'
          +       '<button class="dark-btn" data-action="close-editor" style="border:none; background:#1B1E26; color:#fff; font-size:13px; font-weight:600; cursor:pointer; padding:9px 20px; border-radius:9px;">Klaar</button>'
          +     '</div>'
@@ -831,7 +831,7 @@
       if (!list || !list.length) { hide(); return; }
       b._items = list;
       b.innerHTML = list.map(function (p, i) {
-        return '<div class="addr-pick" data-addr-pick="' + i + '" style="padding:9px 12px; font-size:13px; color:#2A2E38; cursor:pointer; border-bottom:1px solid #F2F3F5; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="' + esc(p.display_name) + '">' + esc(p.display_name) + '</div>';
+        return '<div class="addr-pick" data-addr-pick="' + i + '" style="padding:9px 12px; font-size:13px; color:#1F232C; cursor:pointer; border-bottom:1px solid #E7E8EB; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="' + esc(p.display_name) + '">' + esc(p.display_name) + '</div>';
       }).join('');
       b.style.display = 'block';
     }
