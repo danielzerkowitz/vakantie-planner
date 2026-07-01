@@ -74,7 +74,7 @@
   var GRID_ROWS = [ALLDAY].concat(SEGMENTS);
   // Day-columns per page. Prefer 14, but if that would squeeze each column
   // below MIN_COL_W, fall back to 7 and page with the ‹ › nav.
-  var MIN_COL_W = 200;
+  var MIN_COL_W = 100;
   function daysPerPage() {
     var w = window.innerWidth || document.documentElement.clientWidth || 0;
     var dayArea = w - 312 - 116; // minus sidebar + sticky time-label column
