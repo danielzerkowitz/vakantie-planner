@@ -72,8 +72,14 @@
   var ALLDAY = { id:'allday', name:'Hele dag', icon:'📌' };
   // grid rows: all-day first, then the time-of-day segments
   var GRID_ROWS = [ALLDAY].concat(SEGMENTS);
-  // how many day-columns fit on one page before the ‹ › nav pages on
-  var DAYS_PER_PAGE = 14;
+  // Day-columns per page. Prefer 14, but if that would squeeze each column
+  // below MIN_COL_W, fall back to 7 and page with the ‹ › nav.
+  var MIN_COL_W = 200;
+  function daysPerPage() {
+    var w = window.innerWidth || document.documentElement.clientWidth || 0;
+    var dayArea = w - 312 - 116; // minus sidebar + sticky time-label column
+    return (dayArea > 0 && dayArea / 14 >= MIN_COL_W) ? 14 : 7;
+  }
   var PALETTES = {
     default: { c_reis:{l:0.64,c:0.190,h:18}, c_bezoek:{l:0.62,c:0.165,h:252}, c_strand:{l:0.72,c:0.130,h:200}, c_activiteit:{l:0.70,c:0.165,h:150} },
     cool:    { c_reis:{l:0.60,c:0.110,h:300}, c_bezoek:{l:0.60,c:0.110,h:248}, c_strand:{l:0.66,c:0.100,h:200}, c_activiteit:{l:0.63,c:0.095,h:222} },
@@ -406,11 +412,12 @@
     var vis = state.items.filter(function (it) { return it.holidayId === holiday.id && state.pv[it.categoryId] !== false; });
     var days = vacationDays(holiday);
 
-    // paginate days into week-sized pages navigated with the ‹ › buttons
-    var pageCount = Math.max(1, Math.ceil(days.length / DAYS_PER_PAGE));
+    // paginate days into pages navigated with the ‹ › buttons
+    var perPage = daysPerPage();
+    var pageCount = Math.max(1, Math.ceil(days.length / perPage));
     var page = Math.min(Math.max(state.weekPage || 0, 0), pageCount - 1);
     state.weekPage = page;
-    var pageDays = days.slice(page * DAYS_PER_PAGE, page * DAYS_PER_PAGE + DAYS_PER_PAGE);
+    var pageDays = days.slice(page * perPage, page * perPage + perPage);
     var today = new Date();
     var todayKey = today.getFullYear() + '-' + today.getMonth() + '-' + today.getDate();
 
@@ -957,11 +964,13 @@
     }
   });
 
-  // re-render only when we cross the mobile/desktop boundary (keeps focus stable otherwise)
+  // re-render only when the layout tier changes — mobile/desktop boundary or the
+  // 14↔7 days-per-page threshold (keeps focus stable otherwise)
   var lastMobile = isMobile();
+  var lastPerPage = daysPerPage();
   window.addEventListener('resize', function () {
-    var m = isMobile();
-    if (m !== lastMobile) { lastMobile = m; render(); }
+    var m = isMobile(), p = daysPerPage();
+    if (m !== lastMobile || p !== lastPerPage) { lastMobile = m; lastPerPage = p; render(); }
   });
 
   render();
