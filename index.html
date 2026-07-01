@@ -72,8 +72,14 @@
   var ALLDAY = { id:'allday', name:'Hele dag', icon:'📌' };
   // grid rows: all-day first, then the time-of-day segments
   var GRID_ROWS = [ALLDAY].concat(SEGMENTS);
-  // how many day-columns fit on one page (a "week") before the ‹ › nav pages on
-  var DAYS_PER_PAGE = 7;
+  // Day-columns per page. Prefer 14, but if that would squeeze each column
+  // below MIN_COL_W, fall back to 7 and page with the ‹ › nav.
+  var MIN_COL_W = 100;
+  function daysPerPage() {
+    var w = window.innerWidth || document.documentElement.clientWidth || 0;
+    var dayArea = w - 312 - 116; // minus sidebar + sticky time-label column
+    return (dayArea > 0 && dayArea / 14 >= MIN_COL_W) ? 14 : 7;
+  }
   var PALETTES = {
     default: { c_reis:{l:0.64,c:0.190,h:18}, c_bezoek:{l:0.62,c:0.165,h:252}, c_strand:{l:0.72,c:0.130,h:200}, c_activiteit:{l:0.70,c:0.165,h:150} },
     cool:    { c_reis:{l:0.60,c:0.110,h:300}, c_bezoek:{l:0.60,c:0.110,h:248}, c_strand:{l:0.66,c:0.100,h:200}, c_activiteit:{l:0.63,c:0.095,h:222} },
@@ -406,11 +412,12 @@
     var vis = state.items.filter(function (it) { return it.holidayId === holiday.id && state.pv[it.categoryId] !== false; });
     var days = vacationDays(holiday);
 
-    // paginate days into week-sized pages navigated with the ‹ › buttons
-    var pageCount = Math.max(1, Math.ceil(days.length / DAYS_PER_PAGE));
+    // paginate days into pages navigated with the ‹ › buttons
+    var perPage = daysPerPage();
+    var pageCount = Math.max(1, Math.ceil(days.length / perPage));
     var page = Math.min(Math.max(state.weekPage || 0, 0), pageCount - 1);
     state.weekPage = page;
-    var pageDays = days.slice(page * DAYS_PER_PAGE, page * DAYS_PER_PAGE + DAYS_PER_PAGE);
+    var pageDays = days.slice(page * perPage, page * perPage + perPage);
     var today = new Date();
     var todayKey = today.getFullYear() + '-' + today.getMonth() + '-' + today.getDate();
 
@@ -534,7 +541,7 @@
     // top bar
     var navBtn = function (action, label, disabled) {
       return '<button class="secondary-btn" data-action="' + action + '"' + (disabled ? ' disabled' : '')
-           +   ' title="' + (action === 'week-prev' ? 'Vorige week' : 'Volgende week') + '"'
+           +   ' title="' + (action === 'week-prev' ? 'Vorige periode' : 'Volgende periode') + '"'
            +   ' style="display:flex; align-items:center; justify-content:center; width:30px; height:30px; border:1px solid #D4D7DD; background:#fff; color:' + (disabled ? '#A4AAB4' : '#434953') + '; border-radius:8px; font-size:16px; line-height:1; cursor:' + (disabled ? 'default' : 'pointer') + ';">' + label + '</button>';
     };
     var weekNav = pageCount > 1
@@ -570,7 +577,7 @@
     pageDays.forEach(function (day) {
       var isToday = (day.y + '-' + day.m + '-' + day.d) === todayKey;
       var headBg = day.weekend ? '#F8EDD6' : '#FAFAFB';
-      html += '<div style="flex:1 1 0; min-width:104px; padding:9px 10px; text-align:center; background:' + headBg + '; border-right:1px solid #BFC3CC; border-bottom:1.5px solid #B3B8C2; display:flex; flex-direction:column; align-items:center; gap:3px;">'
+      html += '<div style="flex:1 1 0; min-width:68px; padding:9px 6px; text-align:center; background:' + headBg + '; border-right:1px solid #BFC3CC; border-bottom:1.5px solid #B3B8C2; display:flex; flex-direction:column; align-items:center; gap:3px;">'
             +   '<span style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:' + (day.weekend ? '#985810' : '#565C67') + ';">' + WD[day.wd] + '</span>'
             +   '<span style="font-size:14px; font-weight:700; line-height:1.2; ' + (isToday ? 'color:#fff; background:#E5484D; border-radius:20px; padding:2px 9px;' : 'color:#1F232C;') + '">' + MONTHS_SHORT[day.m] + ' ' + day.d + '</span>'
             + '</div>';
@@ -589,7 +596,7 @@
       pageDays.forEach(function (day) {
         var its = (byCell[day.m + '-' + day.d + '-' + slot.id] || []);
         var cellBg = isAll ? (day.weekend ? '#F6EEDC' : '#FBFAFE') : (day.weekend ? '#F7EEDC' : '#FFFFFF');
-        html += '<div class="cell" data-drop="cell" data-m="' + day.m + '" data-d="' + day.d + '" data-seg="' + slot.id + '" style="flex:1 1 0; min-width:104px; min-height:' + (isAll ? '56px' : '104px') + '; border-right:1px solid ' + (day.weekend ? '#E0D2B4' : '#BFC3CC') + '; border-bottom:' + rowBorder + '; background:' + cellBg + '; padding:5px; display:flex; flex-direction:column; gap:5px;">';
+        html += '<div class="cell" data-drop="cell" data-m="' + day.m + '" data-d="' + day.d + '" data-seg="' + slot.id + '" style="flex:1 1 0; min-width:68px; min-height:' + (isAll ? '56px' : '104px') + '; border-right:1px solid ' + (day.weekend ? '#E0D2B4' : '#BFC3CC') + '; border-bottom:' + rowBorder + '; background:' + cellBg + '; padding:5px; display:flex; flex-direction:column; gap:5px;">';
         its.forEach(function (it) {
           var iv = itemView(it);
           html += '<div class="chip" draggable="true" data-id="' + esc(iv.id) + '" data-action="edit" title="' + esc(iv.title) + '" style="background:' + iv.chipBg + '; border-left:3px solid ' + iv.color + '; border-radius:7px; padding:7px 9px 8px 10px; cursor:grab; display:flex; flex-direction:column; gap:3px;">'
@@ -957,11 +964,13 @@
     }
   });
 
-  // re-render only when we cross the mobile/desktop boundary (keeps focus stable otherwise)
+  // re-render only when the layout tier changes — mobile/desktop boundary or the
+  // 14↔7 days-per-page threshold (keeps focus stable otherwise)
   var lastMobile = isMobile();
+  var lastPerPage = daysPerPage();
   window.addEventListener('resize', function () {
-    var m = isMobile();
-    if (m !== lastMobile) { lastMobile = m; render(); }
+    var m = isMobile(), p = daysPerPage();
+    if (m !== lastMobile || p !== lastPerPage) { lastMobile = m; lastPerPage = p; render(); }
   });
 
   render();
