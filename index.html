@@ -129,7 +129,7 @@
     var dd = defaultDates();
     var runtime = {
       draggingId: null, editorId: null, addTitle: '', addCategoryId: 'c_reis',
-      view: 'list', weekPage: 0, dayIndex: 0, newOpen: false, newName: '', newStart: dd.start, newEnd: dd.end,
+      view: 'list', confirmDeleteOpen: false, weekPage: 0, dayIndex: 0, newOpen: false, newName: '', newStart: dd.start, newEnd: dd.end,
       newCatOpen: false, newCatName: '', newCatColor: CAT_COLORS[0],
       palette: 'default', showBalance: true,
     };
@@ -252,6 +252,27 @@
   function segName(id) { if (id === 'allday') return ALLDAY.name; var s = SEGMENTS.find(function (x) { return x.id === id; }); return s ? s.name : ''; }
   function currentHoliday() { return state.holidays.find(function (h) { return h.id === state.view; }) || null; }
 
+  // ----------------------------------------------------------------- URL (#/<id>/<slug>) so a vacation can be linked to directly
+  function slugify(s) {
+    return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  }
+  function holidayHash(h) { var slug = slugify(h.name); return '#/' + encodeURIComponent(h.id) + (slug ? '/' + slug : ''); }
+  function idFromHash() { var m = /^#\/([^\/]+)/.exec(location.hash); return m ? decodeURIComponent(m[1]) : null; }
+  function syncUrl() {
+    var h = currentHoliday();
+    document.title = h ? h.name + ' · Vakantie-planner' : 'Vakantie-planner';
+    if (!h && state.view !== 'list') return; // deep link not resolved yet — wait for cloud data
+    var want = h ? holidayHash(h) : '';
+    if (location.hash === want) return;
+    var url = location.pathname + location.search + want;
+    var curId = idFromHash();
+    // same vacation (renamed) or a stale/unknown link → replace; real navigation → push (so Back works)
+    var stale = curId && !state.holidays.some(function (x) { return x.id === curId; });
+    if ((h && curId === h.id) || stale) history.replaceState(null, '', url);
+    else history.pushState(null, '', url);
+  }
+
   function vacationDays(h) {
     if (!h) return [];
     var s = parseISO(h.start), e = parseISO(h.end);
@@ -301,6 +322,7 @@
     state.holidays = state.holidays.filter(function (h) { return h.id !== id; });
     state.items = state.items.filter(function (it) { return it.holidayId !== id; });
     if (state.view === id) state.view = 'list';
+    state.confirmDeleteOpen = false;
     persist(); render();
   }
   function toggleCategory(cid) { state.pv = Object.assign({}, state.pv); state.pv[cid] = !state.pv[cid]; persist(); render(); }
@@ -440,7 +462,10 @@
     // ---------- sidebar ----------
     html += '<aside style="width:312px; flex:0 0 312px; height:100%; background:#FFFFFF; border-right:1px solid #DBDDE2; display:flex; flex-direction:column;">';
     html += '<div style="padding:16px 20px 15px; border-bottom:1px solid #E5E6EA;">'
-          +   '<button class="back-btn" data-action="back-to-list" style="border:none; background:none; color:#6F757F; font-size:12.5px; font-weight:600; cursor:pointer; padding:0; margin-bottom:9px;">← Alle vakanties</button>'
+          +   '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:9px;">'
+          +     '<button class="back-btn" data-action="back-to-list" style="border:none; background:none; color:#6F757F; font-size:12.5px; font-weight:600; cursor:pointer; padding:0;">← Alle vakanties</button>'
+          +     '<button class="delete-btn" data-action="confirm-delete-holiday" style="border:none; background:none; color:#C0392B; font-size:12.5px; font-weight:600; cursor:pointer; padding:0;">Verwijderen</button>'
+          +   '</div>'
           +   '<input type="text" data-field="holidayName" value="' + esc(holiday.name) + '" style="width:100%; border:none; background:none; padding:0; font-size:18px; font-weight:700; letter-spacing:-0.01em; color:#1B1E26;" />'
           +   '<div style="font-size:12.5px; color:#6F757F; margin-top:2px;">' + esc(fmtRange(holiday)) + '</div>'
           + '</div>';
@@ -628,7 +653,10 @@
 
     if (!days.length) {
       html += '<div style="padding:18px 16px; border-bottom:1px solid #DBDDE2; background:#fff;">'
-            +   '<button class="back-btn" data-action="back-to-list" style="border:none; background:none; color:#6F757F; font-size:13px; font-weight:600; cursor:pointer; padding:0;">← Alle vakanties</button>'
+            +   '<div style="display:flex; align-items:center; justify-content:space-between;">'
+          +     '<button class="back-btn" data-action="back-to-list" style="border:none; background:none; color:#6F757F; font-size:13px; font-weight:600; cursor:pointer; padding:0;">← Alle vakanties</button>'
+          +     '<button class="delete-btn" data-action="confirm-delete-holiday" style="border:none; background:none; color:#C0392B; font-size:13px; font-weight:600; cursor:pointer; padding:0;">Verwijderen</button>'
+          +   '</div>'
             +   '<div style="font-size:19px; font-weight:700; margin-top:8px;">' + esc(holiday.name) + '</div>'
             + '</div>'
             + '<div style="padding:40px 24px; text-align:center; color:#6F757F; font-size:14px;">Stel geldige reisdata in om je dagen te plannen.</div>'
@@ -650,7 +678,10 @@
 
     // header
     html += '<div style="flex:0 0 auto; background:#fff; border-bottom:1px solid #DBDDE2; padding:14px 16px 0;">'
-          +   '<button class="back-btn" data-action="back-to-list" style="border:none; background:none; color:#6F757F; font-size:13px; font-weight:600; cursor:pointer; padding:0;">← Alle vakanties</button>'
+          +   '<div style="display:flex; align-items:center; justify-content:space-between;">'
+          +     '<button class="back-btn" data-action="back-to-list" style="border:none; background:none; color:#6F757F; font-size:13px; font-weight:600; cursor:pointer; padding:0;">← Alle vakanties</button>'
+          +     '<button class="delete-btn" data-action="confirm-delete-holiday" style="border:none; background:none; color:#C0392B; font-size:13px; font-weight:600; cursor:pointer; padding:0;">Verwijderen</button>'
+          +   '</div>'
           +   '<div style="font-size:19px; font-weight:700; letter-spacing:-0.01em; margin-top:7px;">' + esc(holiday.name) + '</div>'
           +   '<div style="font-size:12.5px; color:#6F757F; margin-top:1px;">' + esc(fmtRange(holiday)) + '</div>'
           // day nav bar
@@ -723,6 +754,23 @@
          +       '<span style="flex:1;"></span>'
          +       '<button class="secondary-btn" data-action="close-new" style="border:1px solid #D4D7DD; background:#fff; color:#434953; font-size:13px; font-weight:600; cursor:pointer; padding:9px 16px; border-radius:9px;">Annuleren</button>'
          +       '<button class="dark-btn" data-action="create-holiday" style="border:none; background:#1B1E26; color:#fff; font-size:13px; font-weight:600; cursor:pointer; padding:9px 20px; border-radius:9px;">Vakantie aanmaken</button>'
+         +     '</div>'
+         +   '</div>'
+         + '</div>';
+  }
+
+  function renderConfirmDelete(h) {
+    var n = state.items.filter(function (it) { return it.holidayId === h.id; }).length;
+    return '<div data-action="confirm-overlay-close" style="position:fixed; inset:0; background:rgba(20,24,33,.32); display:flex; align-items:center; justify-content:center; z-index:60; backdrop-filter:blur(1.5px);">'
+         +   '<div data-modal-card style="width:400px; max-width:92vw; background:#fff; border-radius:18px; box-shadow:0 24px 64px rgba(16,24,40,.28); overflow:hidden;">'
+         +     '<div style="padding:20px 22px 18px;">'
+         +       '<div style="font-size:17px; font-weight:700; letter-spacing:-0.01em;">Vakantie verwijderen?</div>'
+         +       '<div style="font-size:13.5px; color:#6F757F; margin-top:6px; line-height:1.45;">“' + esc(h.name) + '” en ' + (n === 1 ? '1 activiteit' : n + ' activiteiten') + ' worden voor iedereen verwijderd. Dit kan niet ongedaan worden gemaakt.</div>'
+         +     '</div>'
+         +     '<div style="display:flex; align-items:center; gap:9px; padding:14px 22px; border-top:1px solid #E5E6EA; background:#FAFAFB;">'
+         +       '<span style="flex:1;"></span>'
+         +       '<button class="secondary-btn" data-action="close-confirm-delete" style="border:1px solid #D4D7DD; background:#fff; color:#434953; font-size:13px; font-weight:600; cursor:pointer; padding:9px 16px; border-radius:9px;">Annuleren</button>'
+         +       '<button data-action="delete-holiday" data-id="' + esc(h.id) + '" style="border:none; background:#C0392B; color:#fff; font-size:13px; font-weight:600; cursor:pointer; padding:9px 20px; border-radius:9px;">Verwijderen</button>'
          +     '</div>'
          +   '</div>'
          + '</div>';
@@ -807,7 +855,9 @@
     html += '</div>';
     if (state.newOpen) html += renderNewModal();
     if (state.editorId) html += renderEditor();
+    if (state.confirmDeleteOpen && holiday) html += renderConfirmDelete(holiday);
     document.getElementById('app').innerHTML = html;
+    syncUrl();
   }
 
   // ----------------------------------------------------------------- events (delegated, attached once)
@@ -888,6 +938,7 @@
     if (!el) return;
     var action = el.getAttribute('data-action');
     if (action === 'new-overlay-close') { if (!e.target.closest('[data-modal-card]')) { state.newOpen = false; render(); } return; }
+    if (action === 'confirm-overlay-close') { if (!e.target.closest('[data-modal-card]')) { state.confirmDeleteOpen = false; render(); } return; }
     if (action === 'editor-overlay-close') { if (!e.target.closest('[data-modal-card]')) { state.editorId = null; render(); } return; }
     switch (action) {
       case 'open-new': state.newOpen = true; render(); break;
@@ -898,6 +949,8 @@
       case 'week-next': state.weekPage = (state.weekPage || 0) + 1; render(); break;
       case 'day-prev': if (state.dayIndex > 0) { state.dayIndex--; render(); } break;
       case 'day-next': state.dayIndex = (state.dayIndex || 0) + 1; render(); break;
+      case 'confirm-delete-holiday': state.confirmDeleteOpen = true; render(); break;
+      case 'close-confirm-delete': state.confirmDeleteOpen = false; render(); break;
       case 'delete-holiday': deleteHoliday(el.getAttribute('data-id')); break;
       case 'back-to-list': state.view = 'list'; render(); break;
       case 'add': addItem(); break;
@@ -920,7 +973,7 @@
     if (f === 'addTitle') state.addTitle = e.target.value;
     else if (f === 'newName') state.newName = e.target.value;
     else if (f === 'newCatName') state.newCatName = e.target.value;
-    else if (f === 'holidayName') { var h = currentHoliday(); if (h) updateHoliday(h.id, { name: e.target.value }); }
+    else if (f === 'holidayName') { var h = currentHoliday(); if (h) { updateHoliday(h.id, { name: e.target.value }); syncUrl(); } }
     else if (f === 'editTitle') { if (state.editorId) updateItem(state.editorId, { title: e.target.value }); }
     else if (f === 'editNote') { if (state.editorId) updateItem(state.editorId, { note: e.target.value }); }
     else if (f === 'editUrl') { if (state.editorId) updateItem(state.editorId, { url: e.target.value }); }
@@ -959,7 +1012,8 @@
     if (e.key === 'Escape') {
       var sb = document.querySelector('[data-addr-suggest]');
       if (sb && sb.style.display !== 'none') { addrAC.hide(); return; }
-      if (state.newOpen) { state.newOpen = false; render(); } else if (state.editorId) { state.editorId = null; render(); }
+      if (state.confirmDeleteOpen) { state.confirmDeleteOpen = false; render(); }
+      else if (state.newOpen) { state.newOpen = false; render(); } else if (state.editorId) { state.editorId = null; render(); }
     }
   });
 
@@ -972,6 +1026,16 @@
     if (m !== lastMobile || p !== lastPerPage) { lastMobile = m; lastPerPage = p; render(); }
   });
 
+  // Back/forward and hand-edited URLs
+  window.addEventListener('popstate', function () {
+    var v = idFromHash() || 'list';
+    if (v === state.view) return;
+    state.view = v; state.weekPage = 0; state.dayIndex = 0;
+    state.editorId = null; state.newOpen = false; state.confirmDeleteOpen = false;
+    render();
+  });
+
+  state.view = idFromHash() || 'list';
   render();
   cloud.load();
 })();
